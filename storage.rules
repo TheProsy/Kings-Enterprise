@@ -1,0 +1,56 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function userData(businessId) {
+      return firestore.get(
+        /databases/(default)/documents/businesses/$(businessId)/users/$(request.auth.uid)
+      ).data;
+    }
+
+    function isBusinessMember(businessId) {
+      return request.auth != null && userData(businessId).active == true;
+    }
+
+    function hasPermission(businessId, permission) {
+      return isBusinessMember(businessId) &&
+        (userData(businessId).role == 'owner' || permission in userData(businessId).permissions);
+    }
+
+    function canReadReceipt(businessId, receiptId) {
+      return isBusinessMember(businessId) &&
+        (
+          userData(businessId).role == 'owner' ||
+          hasPermission(businessId, 'receipts:view_all') ||
+          (
+            (
+              hasPermission(businessId, 'receipts:view') ||
+              hasPermission(businessId, 'sales:view') ||
+              hasPermission(businessId, 'sales:create')
+            ) &&
+            firestore.get(
+              /databases/(default)/documents/businesses/$(businessId)/receipts/$(receiptId)
+            ).data.processedBy.userId == request.auth.uid
+          )
+        );
+    }
+
+    // Public product images
+    match /businesses/{businessId}/products/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Confidential purchase receipts & business documents
+    match /businesses/{businessId}/documents/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Receipt PDFs are private. Only the staff member who processed the sale,
+    // or a staff member with receipt-wide visibility, may read a receipt.
+    // Writes are performed exclusively by Cloud Functions.
+    match /businesses/{businessId}/receipts/{receiptId}/{allPaths=**} {
+      allow read: if canReadReceipt(businessId, receiptId);
+      allow write: if false;
+    }
+  }
+}

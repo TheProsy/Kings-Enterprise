@@ -1,0 +1,501 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Business-scoped staff profile lives at
+    // businesses/{businessId}/users/{uid}
+    function getUserData(businessId) {
+      return get(
+        /databases/$(database)/documents/businesses/$(businessId)/users/$(request.auth.uid)
+      ).data;
+    }
+
+    function isBusinessMember(businessId) {
+      return isAuthenticated() && getUserData(businessId).active == true;
+    }
+
+    function isOwner(businessId) {
+      return isBusinessMember(businessId) && getUserData(businessId).role == 'owner';
+    }
+
+    function hasPermission(businessId, permission) {
+      return (
+        isBusinessMember(businessId) &&
+        (getUserData(businessId).role == 'owner' ||
+          permission in getUserData(businessId).permissions)
+      );
+    }
+
+    // Ledger fields that the POS and purchase flows are allowed to move.
+    // These are the only fields a sale / stock receipt / payment may touch
+    // on a customer or supplier document.
+    function changesOnlyBalanceFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'totalPurchases',
+        'totalPaid',
+        'balanceDue',
+        'updatedAt'
+      ]);
+    }
+
+    // Sale updates issued by the client checkout, payment, return and void
+    // flows. Each flow may only move its own fields.
+    function changesOnlyPaymentFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'amountPaid',
+        'balanceDue',
+        'paymentStatus',
+        'lastPaymentAt',
+        'updatedAt'
+      ]);
+    }
+
+    function changesOnlyReturnFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'returnedQuantities',
+        'returnedTotalKobo',
+        'returnStatus',
+        'balanceDue',
+        'paymentStatus',
+        'lastReturnAt',
+        'updatedAt'
+      ]);
+    }
+
+    function changesOnlyVoidFields() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'status',
+        'voided',
+        'voidedAt',
+        'voidReason',
+        'voidReceiptId',
+        'voidReceiptNumber',
+        'balanceDue',
+        'updatedAt'
+      ]);
+    }
+
+    function canIssueSaleReceipt(businessId) {
+      return isOwner(businessId) || hasPermission(businessId, 'sales:create');
+    }
+
+    function canIssuePaymentReceipt(businessId) {
+      return (
+        isOwner(businessId) ||
+        hasPermission(businessId, 'finance:record_payment') ||
+        hasPermission(businessId, 'sales:create') ||
+        hasPermission(businessId, 'receipts:create')
+      );
+    }
+
+    function canIssueReturnReceipt(businessId) {
+      return (
+        isOwner(businessId) ||
+        hasPermission(businessId, 'sales:refund') ||
+        hasPermission(businessId, 'sales:edit') ||
+        hasPermission(businessId, 'receipts:refund')
+      );
+    }
+
+    function canIssueVoidReceipt(businessId) {
+      return (
+        isOwner(businessId) ||
+        hasPermission(businessId, 'sales:cancel') ||
+        hasPermission(businessId, 'receipts:void')
+      );
+    }
+
+    function canIssueAnyReceipt(businessId) {
+      return (
+        canIssueSaleReceipt(businessId) ||
+        canIssuePaymentReceipt(businessId) ||
+        canIssueReturnReceipt(businessId) ||
+        canIssueVoidReceipt(businessId)
+      );
+    }
+
+    // ------------------------------------------------------------------
+    // Public business info (website)
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/publicInfo/{docId} {
+      allow read: if true;
+      allow write: if isOwner(businessId);
+    }
+
+    // ------------------------------------------------------------------
+    // Public catalogue (products + variants)
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/products/{productId} {
+      allow read: if true;
+      allow create: if isOwner(businessId) || hasPermission(businessId, 'products:create');
+      allow update:
+        if isOwner(businessId) || hasPermission(businessId, 'products:edit');
+      allow delete: if isOwner(businessId) || hasPermission(businessId, 'products:delete');
+
+      match /variants/{variantId} {
+        allow read: if true;
+        allow create:
+          if isOwner(businessId) ||
+            hasPermission(businessId, 'products:create') ||
+            hasPermission(businessId, 'products:edit');
+        allow update:
+          if isOwner(businessId) ||
+            hasPermission(businessId, 'products:edit') ||
+            hasPermission(businessId, 'products:manage_stock') ||
+            (
+              (
+                hasPermission(businessId, 'sales:create') ||
+                hasPermission(businessId, 'sales:refund') ||
+                hasPermission(businessId, 'sales:edit') ||
+                hasPermission(businessId, 'sales:cancel') ||
+                hasPermission(businessId, 'receipts:refund') ||
+                hasPermission(businessId, 'receipts:void')
+              ) &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'quantityOnHand',
+                'updatedAt'
+              ])
+            );
+        allow delete: if isOwner(businessId) || hasPermission(businessId, 'products:edit');
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // Categories (public readable)
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/categories/{categoryId} {
+      allow read: if true;
+      allow create:
+        if isOwner(businessId) || hasPermission(businessId, 'products:create');
+      allow update:
+        if isOwner(businessId) || hasPermission(businessId, 'products:edit');
+      allow delete: if isOwner(businessId) || hasPermission(businessId, 'products:edit');
+    }
+
+    // ------------------------------------------------------------------
+    // Owner bootstrap lock (created only once, together with the owner)
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/meta/{docId} {
+      allow read: if isAuthenticated();
+      allow create:
+        if isAuthenticated() &&
+          docId == 'owner' &&
+          request.resource.data.uid == request.auth.uid &&
+          !exists(/databases/$(database)/documents/businesses/$(businessId)/meta/owner);
+      allow update, delete: if isOwner(businessId);
+    }
+
+    // ------------------------------------------------------------------
+    // Business-scoped staff (users)
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/users/{userId} {
+      allow read:
+        if isAuthenticated() &&
+        (request.auth.uid == userId || isBusinessMember(businessId));
+      allow create:
+        if isOwner(businessId) ||
+          (
+            isAuthenticated() &&
+            request.auth.uid == userId &&
+            request.resource.data.uid == userId &&
+            request.resource.data.role == 'owner' &&
+            !exists(/databases/$(database)/documents/businesses/$(businessId)/meta/owner) &&
+            getAfter(/databases/$(database)/documents/businesses/$(businessId)/meta/owner).data.uid == userId
+          );
+      allow update:
+        if isOwner(businessId) ||
+          (
+            isAuthenticated() &&
+            request.auth.uid == userId &&
+            resource.data.role == 'owner' &&
+            request.resource.data.role == 'owner' &&
+            request.resource.data.uid == userId &&
+            !exists(/databases/$(database)/documents/businesses/$(businessId)/meta/owner) &&
+            getAfter(/databases/$(database)/documents/businesses/$(businessId)/meta/owner).data.uid == userId
+          );
+      allow delete: if isOwner(businessId);
+    }
+
+    // ------------------------------------------------------------------
+    // Inventory & stock (immutable audit log)
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/stockMovements/{movementId} {
+      allow read: if isBusinessMember(businessId);
+      allow create: if isBusinessMember(businessId);
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------
+    // Sales & receipts
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/sales/{saleId} {
+      allow read: if isBusinessMember(businessId);
+      allow create:
+        if isBusinessMember(businessId) &&
+        (isOwner(businessId) || hasPermission(businessId, 'sales:create'));
+      allow update:
+        if isBusinessMember(businessId) &&
+        (
+          isOwner(businessId) ||
+          hasPermission(businessId, 'sales:edit') ||
+          (
+            canIssuePaymentReceipt(businessId) &&
+            changesOnlyPaymentFields()
+          ) ||
+          (
+            canIssueReturnReceipt(businessId) &&
+            changesOnlyReturnFields()
+          ) ||
+          (
+            canIssueVoidReceipt(businessId) &&
+            changesOnlyVoidFields()
+          )
+        );
+      allow delete: if isOwner(businessId) || hasPermission(businessId, 'sales:cancel');
+    }
+
+    // Receipts are immutable except for the narrow void stamp applied to the
+    // original sale receipt. Sale, payment, return and void receipts are
+    // created directly by the signed-in staff member's client transaction.
+    match /businesses/{businessId}/receipts/{receiptId} {
+      allow read:
+        if isBusinessMember(businessId) &&
+        (
+          isOwner(businessId) ||
+          hasPermission(businessId, 'receipts:view_all') ||
+          (
+            (
+              hasPermission(businessId, 'receipts:view') ||
+              hasPermission(businessId, 'sales:view') ||
+              hasPermission(businessId, 'sales:create')
+            ) &&
+            resource.data.processedBy.userId == request.auth.uid
+          )
+        );
+      allow create:
+        if isBusinessMember(businessId) &&
+        request.resource.data.documentStatus == 'active' &&
+        request.resource.data.processedBy.userId == request.auth.uid &&
+        (
+          (
+            request.resource.data.receiptType == 'sale' &&
+            canIssueSaleReceipt(businessId)
+          ) ||
+          (
+            request.resource.data.receiptType == 'payment' &&
+            canIssuePaymentReceipt(businessId)
+          ) ||
+          (
+            request.resource.data.receiptType == 'return' &&
+            canIssueReturnReceipt(businessId)
+          ) ||
+          (
+            request.resource.data.receiptType == 'void' &&
+            canIssueVoidReceipt(businessId)
+          )
+        );
+      allow update:
+        if isBusinessMember(businessId) &&
+        resource.data.receiptType == 'sale' &&
+        resource.data.documentStatus == 'active' &&
+        canIssueVoidReceipt(businessId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'documentStatus',
+          'voidedAt',
+          'voidReason',
+          'voidReceiptId',
+          'voidReceiptNumber',
+          'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    // Yearly receipt numbering counters. The POS increments the matching
+    // counter atomically alongside each receipt document.
+    match /businesses/{businessId}/receiptCounters/{year} {
+      allow read: if isBusinessMember(businessId);
+      allow create:
+        if isBusinessMember(businessId) &&
+        canIssueAnyReceipt(businessId) &&
+        request.resource.data.keys().hasOnly([
+          'receipt',
+          'payment',
+          'return',
+          'void',
+          'updatedAt'
+        ]);
+      allow update:
+        if isBusinessMember(businessId) &&
+        canIssueAnyReceipt(businessId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'receipt',
+          'payment',
+          'return',
+          'void',
+          'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    // ------------------------------------------------------------------
+    // Purchases & incoming stock
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/purchases/{purchaseId} {
+      allow read: if isBusinessMember(businessId);
+      allow create:
+        if isBusinessMember(businessId) &&
+        (isOwner(businessId) || hasPermission(businessId, 'purchases:create'));
+      allow update, delete: if isOwner(businessId);
+    }
+
+    // ------------------------------------------------------------------
+    // Customers & debts
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/customers/{customerId} {
+      allow read: if isBusinessMember(businessId);
+      allow create:
+        if isBusinessMember(businessId) &&
+        (isOwner(businessId) || hasPermission(businessId, 'customers:create'));
+      allow update:
+        if isBusinessMember(businessId) &&
+        (
+          isOwner(businessId) ||
+          hasPermission(businessId, 'customers:edit') ||
+          (
+            (
+              hasPermission(businessId, 'sales:create') ||
+              hasPermission(businessId, 'finance:record_payment') ||
+              hasPermission(businessId, 'receipts:create') ||
+              hasPermission(businessId, 'sales:refund') ||
+              hasPermission(businessId, 'sales:edit') ||
+              hasPermission(businessId, 'sales:cancel') ||
+              hasPermission(businessId, 'receipts:refund') ||
+              hasPermission(businessId, 'receipts:void')
+            ) &&
+            changesOnlyBalanceFields()
+          )
+        );
+      allow delete: if isOwner(businessId);
+    }
+
+    // ------------------------------------------------------------------
+    // Suppliers
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/suppliers/{supplierId} {
+      allow read: if isBusinessMember(businessId);
+      allow create:
+        if isBusinessMember(businessId) &&
+        (isOwner(businessId) || hasPermission(businessId, 'suppliers:create'));
+      allow update:
+        if isBusinessMember(businessId) &&
+        (
+          isOwner(businessId) ||
+          hasPermission(businessId, 'suppliers:edit') ||
+          (
+            (
+              hasPermission(businessId, 'purchases:create') ||
+              hasPermission(businessId, 'finance:record_payment')
+            ) &&
+            changesOnlyBalanceFields()
+          )
+        );
+      allow delete: if isOwner(businessId);
+    }
+
+    // ------------------------------------------------------------------
+    // Expenses
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/expenses/{expenseId} {
+      allow read: if isBusinessMember(businessId);
+      allow create:
+        if isBusinessMember(businessId) &&
+        (isOwner(businessId) || hasPermission(businessId, 'expenses:create'));
+      allow update, delete: if isOwner(businessId);
+    }
+
+    // ------------------------------------------------------------------
+    // Deliveries (reserved for the delivery module)
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/deliveries/{deliveryId} {
+      allow read: if isBusinessMember(businessId);
+      allow write: if isOwner(businessId);
+    }
+
+    // ------------------------------------------------------------------
+    // Damaged stock reports
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/damagedReports/{reportId} {
+      allow read: if isBusinessMember(businessId);
+      allow create: if isBusinessMember(businessId);
+      allow update, delete: if isOwner(businessId);
+    }
+
+    // ------------------------------------------------------------------
+    // Customer enquiries (website visitors can create)
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/enquiries/{enquiryId} {
+      allow create: if true;
+      allow read, update, delete: if isBusinessMember(businessId);
+    }
+
+    // ------------------------------------------------------------------
+    // Payments (debt settlements collected in the portal)
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/payments/{paymentId} {
+      allow read: if isBusinessMember(businessId);
+      allow create:
+        if isBusinessMember(businessId) &&
+        (
+          isOwner(businessId) ||
+          hasPermission(businessId, 'finance:record_payment') ||
+          hasPermission(businessId, 'sales:create') ||
+          hasPermission(businessId, 'receipts:create')
+        );
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------
+    // Audit logs (append-only)
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/auditLogs/{logId} {
+      allow read:
+        if isBusinessMember(businessId) &&
+        (isOwner(businessId) || hasPermission(businessId, 'settings:view'));
+      allow create: if isBusinessMember(businessId);
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------
+    // Business settings
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/settings/{settingsId} {
+      allow read: if isBusinessMember(businessId);
+      allow write:
+        if isOwner(businessId) || hasPermission(businessId, 'settings:edit');
+    }
+
+    // ------------------------------------------------------------------
+    // Idempotency keys (written by every write path that can be retried)
+    // ------------------------------------------------------------------
+    match /businesses/{businessId}/idempotency/{key} {
+      allow read: if isBusinessMember(businessId);
+      allow create: if isBusinessMember(businessId);
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------
+    // Legacy root-level user profiles (kept for backward compatibility)
+    // ------------------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isOwner('default-business'));
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isOwner('default-business'));
+    }
+  }
+}

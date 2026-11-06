@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 64" width="100%" height="100%" fill="none">
+  <defs>
+    <linearGradient id="kbm-gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D" />
+      <stop offset="50%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#B45309" />
+    </linearGradient>
+    <linearGradient id="kbm-navy-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+    <filter id="kbm-glow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#000" flood-opacity="0.2" />
+    </filter>
+  </defs>
+
+  <!-- Left Icon Mark (48x48) -->
+  <g transform="translate(6, 8)">
+    <!-- Rounded Shield Background -->
+    <rect x="0" y="0" width="48" height="48" rx="12" fill="url(#kbm-navy-grad)" stroke="url(#kbm-gold-grad)" stroke-width="1.5" />
+    
+    <!-- Foundation Base Lintel -->
+    <rect x="9" y="32" width="30" height="3" rx="1.5" fill="url(#kbm-gold-grad)" filter="url(#kbm-glow)" />
+    
+    <!-- Foundation Vertical Support Rebars -->
+    <rect x="12" y="37" width="3" height="4" rx="1" fill="url(#kbm-gold-grad)" opacity="0.9" />
+    <rect x="18" y="37" width="3" height="4" rx="1" fill="url(#kbm-gold-grad)" opacity="0.9" />
+    <rect x="24" y="37" width="3" height="4" rx="1" fill="url(#kbm-gold-grad)" />
+    <rect x="30" y="37" width="3" height="4" rx="1" fill="url(#kbm-gold-grad)" opacity="0.9" />
+    <rect x="36" y="37" width="3" height="4" rx="1" fill="url(#kbm-gold-grad)" opacity="0.9" />
+
+    <!-- Crown Triangular Trusses / Gables -->
+    <!-- Center Peak -->
+    <polygon points="24,10 30,30 18,30" fill="url(#kbm-gold-grad)" filter="url(#kbm-glow)" />
+    <!-- Left Peak -->
+    <polygon points="13,16 20,30 9,30" fill="url(#kbm-gold-grad)" />
+    <!-- Right Peak -->
+    <polygon points="35,16 39,30 28,30" fill="url(#kbm-gold-grad)" />
+
+    <!-- Diamond Accent -->
+    <polygon points="24,18 26.5,22 24,26 21.5,22" fill="#0F172A" />
+    <polygon points="24,20 25.5,22 24,24 22.5,22" fill="#FDE047" />
+  </g>
+
+  <!-- Text: KINGS -->
+  <text x="68" y="34" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Inter, sans-serif" font-size="25" font-weight="900" letter-spacing="0.04em" fill="#0F172A">
+    KINGS
+  </text>
+
+  <!-- Gold separator dot -->
+  <circle cx="160" cy="26" r="3.5" fill="url(#kbm-gold-grad)" />
+
+  <!-- Subtext: BUILDING MATERIALS -->
+  <text x="69" y="49" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Inter, sans-serif" font-size="9" font-weight="700" letter-spacing="0.22em" fill="#B45309">
+    BUILDING MATERIALS
+  </text>
+</svg>

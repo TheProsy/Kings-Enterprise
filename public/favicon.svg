@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%" fill="none">
+  <defs>
+    <linearGradient id="kbmgold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D" />
+      <stop offset="50%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#B45309" />
+    </linearGradient>
+    <linearGradient id="kbmnavy" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+    <linearGradient id="kbmaccent" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#FEF08A" />
+    </linearGradient>
+    <filter id="kbmshadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Solid rounded base shield -->
+  <rect x="6" y="6" width="108" height="108" rx="24" fill="url(#kbmnavy)" stroke="url(#kbmgold)" stroke-width="2.5" />
+
+  <!-- Subtle structural grid lines in background -->
+  <path d="M20 60h80 M60 20v80" stroke="#334155" stroke-width="1" stroke-dasharray="3 3" opacity="0.35" />
+
+  <!-- Architectural Crown & Keystone Monogram -->
+  <!-- Foundation lintel / beam -->
+  <rect x="24" y="74" width="72" height="7" rx="3.5" fill="url(#kbmgold)" filter="url(#kbmshadow)" />
+  
+  <!-- Foundation pillars (representing structural rebars / building columns) -->
+  <rect x="29" y="85" width="8" height="11" rx="2" fill="url(#kbmgold)" opacity="0.9" />
+  <rect x="44" y="85" width="8" height="11" rx="2" fill="url(#kbmgold)" opacity="0.9" />
+  <rect x="56" y="85" width="8" height="11" rx="2" fill="url(#kbmgold)" />
+  <rect x="68" y="85" width="8" height="11" rx="2" fill="url(#kbmgold)" opacity="0.9" />
+  <rect x="83" y="85" width="8" height="11" rx="2" fill="url(#kbmgold)" opacity="0.9" />
+
+  <!-- Crown Roof Apexes / Triangular Trusses -->
+  <!-- Center Main Gable / High Crown Peak -->
+  <polygon points="60,24 74,68 46,68" fill="url(#kbmaccent)" filter="url(#kbmshadow)" />
+  
+  <!-- Left Crown Gable Peak -->
+  <polygon points="34,36 49,68 25,68" fill="url(#kbmgold)" />
+  
+  <!-- Right Crown Gable Peak -->
+  <polygon points="86,36 95,68 71,68" fill="url(#kbmgold)" />
+
+  <!-- Central Diamond Keystone Accent in Center Peak -->
+  <polygon points="60,39 66,49 60,59 54,49" fill="#0F172A" />
+  <polygon points="60,43 64,49 60,55 56,49" fill="#FDE047" />
+</svg>

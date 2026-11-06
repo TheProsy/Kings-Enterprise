@@ -1,0 +1,265 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Button } from '@/components/ui/Button';
+import { SearchInput } from '@/components/forms/SearchInput';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { ProductCard } from '@/components/common/ProductCard';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Modal } from '@/components/ui/Modal';
+import { ProductForm } from '@/features/products/ProductForm';
+import { catalogueService, type CatalogueItem } from '@/services';
+import { toast } from '@/lib/toast';
+import { Plus } from 'lucide-react';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { formatMoney } from '@/lib/formatters';
+import { StatusBadge } from '@/components/ui/Badge';
+
+export function ProductsPage() {
+  const [items, setItems] = useState<CatalogueItem[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = searchParams.get('q') ?? '';
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<CatalogueItem | null>(null);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    setLoading(true);
+    try {
+      const catalogue = await catalogueService.list();
+      setItems(catalogue.items);
+      setCategories(catalogue.categories);
+    } catch (error) {
+      console.error(error);
+      toast('Could not load products. Please try again.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const handleSearch = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set('q', value);
+    else next.delete('q');
+    setSearchParams(next, { replace: true });
+  };
+
+  const filtered = useMemo(
+    () =>
+      items.filter((item) => {
+        const term = search.toLowerCase();
+        const matchesSearch =
+          item.productName.toLowerCase().includes(term) ||
+          (item.brand && item.brand.toLowerCase().includes(term));
+        const matchesCategory = !categoryFilter || item.categoryId === categoryFilter;
+        return matchesSearch && matchesCategory;
+      }),
+    [items, search, categoryFilter],
+  );
+
+  const categoryOptions = useMemo(
+    () => [
+      { value: '', label: 'All Categories', count: items.length },
+      ...categories.map((category) => ({
+        value: category.id,
+        label: category.name,
+        count: items.filter((item) => item.categoryId === category.id).length,
+      })),
+    ],
+    [categories, items],
+  );
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Products & Inventory"
+        description="Search, monitor stock levels, and manage your building materials catalogue."
+        action={
+          <Button onClick={() => setFormOpen(true)}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add New Product
+          </Button>
+        }
+      />
+
+      <div className="space-y-3 rounded-xl border border-border bg-surface p-4 shadow-xs">
+        <SearchInput
+          value={search}
+          onChange={handleSearch}
+          placeholder="Search cement, iron rods, roofing sheets, pipes…"
+          ariaLabel="Search products"
+        />
+
+        {categoryOptions.length > 1 && (
+          <SegmentedControl
+            options={categoryOptions}
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            size="sm"
+            ariaLabel="Filter by category"
+          />
+        )}
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((key) => (
+            <div
+              key={key}
+              className="overflow-hidden rounded-xl border border-border bg-surface shadow-xs"
+            >
+              <Skeleton className="h-32 w-full rounded-none" />
+              <div className="space-y-3 p-4">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-5 w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filtered.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filtered.map((item) => (
+            <ProductCard
+              key={item.id}
+              name={item.productName}
+              brand={item.brand}
+              price={item.sellingPrice}
+              stock={item.quantityOnHand}
+              unit={item.unit}
+              lowStock={item.quantityOnHand <= item.minimumStock}
+              category={item.categoryName}
+              onPress={() => setSelectedProduct(item)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border bg-surface p-8 shadow-xs">
+          <EmptyState
+            title="No materials found"
+            description={
+              search || categoryFilter
+                ? 'No products matched your search or category filter. Try clearing filters.'
+                : 'Your catalogue is empty. Add your first product to record your inventory.'
+            }
+            action={
+              search || categoryFilter ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    handleSearch('');
+                    setCategoryFilter('');
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              ) : (
+                <Button size="sm" onClick={() => setFormOpen(true)}>
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Add First Product
+                </Button>
+              )
+            }
+          />
+        </div>
+      )}
+
+      <Modal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        title="Add New Product"
+        description="Add a building material and set up its primary variations, pricing, and stock."
+        size="lg"
+      >
+        <ProductForm onClose={() => setFormOpen(false)} onSuccess={loadData} />
+      </Modal>
+
+      {selectedProduct && (
+        <Modal
+          open={Boolean(selectedProduct)}
+          onClose={() => setSelectedProduct(null)}
+          title={selectedProduct.productName}
+          description={
+            selectedProduct.brand
+              ? `Brand: ${selectedProduct.brand}`
+              : 'Material Specifications'
+          }
+          size="md"
+          footer={
+            <div className="flex justify-end">
+              <Button variant="outline" size="sm" onClick={() => setSelectedProduct(null)}>
+                Close
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-border bg-surface-2 p-3.5">
+                <span className="block text-2xs font-semibold uppercase tracking-wide text-text-muted">
+                  Selling Price
+                </span>
+                <span className="mt-1 block text-xl font-bold tabular-nums text-text-primary">
+                  {formatMoney(selectedProduct.sellingPrice)}
+                  <span className="ml-1 text-xs font-normal text-text-secondary">
+                    /{selectedProduct.unit}
+                  </span>
+                </span>
+              </div>
+              <div className="rounded-xl border border-border bg-surface-2 p-3.5">
+                <span className="block text-2xs font-semibold uppercase tracking-wide text-text-muted">
+                  Current Stock
+                </span>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-xl font-bold tabular-nums text-text-primary">
+                    {selectedProduct.quantityOnHand} {selectedProduct.unit}
+                  </span>
+                  <StatusBadge
+                    status={
+                      selectedProduct.quantityOnHand <= 0
+                        ? 'Out of Stock'
+                        : selectedProduct.quantityOnHand <= selectedProduct.minimumStock
+                          ? 'Low Stock'
+                          : 'In Stock'
+                    }
+                    size="sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <dl className="space-y-2 rounded-xl border border-border bg-surface p-4 text-sm">
+              <div className="flex justify-between border-b border-border pb-2">
+                <dt className="text-text-secondary">Minimum Stock Threshold</dt>
+                <dd className="font-semibold text-text-primary">
+                  {selectedProduct.minimumStock} {selectedProduct.unit}
+                </dd>
+              </div>
+              <div className="flex justify-between border-b border-border pb-2">
+                <dt className="text-text-secondary">Cost Price (Purchase)</dt>
+                <dd className="font-semibold tabular-nums text-text-primary">
+                  {formatMoney(selectedProduct.costPrice)}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-text-secondary">Expected Profit / Unit</dt>
+                <dd className="font-semibold tabular-nums text-success">
+                  {formatMoney(
+                    Math.max(0, selectedProduct.sellingPrice - selectedProduct.costPrice),
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
