@@ -7,6 +7,7 @@ import { Select } from '@/components/ui/Input';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { QuantityInput } from '@/components/ui/QuantityInput';
 import { checkoutService, catalogueService, supplierService } from '@/services';
 import type { CatalogueItem } from '@/services';
 import type { PaymentMethod, Supplier } from '@/types';
@@ -96,11 +97,11 @@ export function NewPurchasePage() {
   };
 
   const addToCart = (variant: CatalogueItem, quantity = 1) => {
-    const existing = cart.find((item) => item.variantId === variant.id);
-    if (existing) {
-      const newQuantity = existing.quantity + quantity;
-      setCart(
-        cart.map((item) =>
+    setCart((current) => {
+      const existing = current.find((item) => item.variantId === variant.id);
+      if (existing) {
+        const newQuantity = existing.quantity + quantity;
+        return current.map((item) =>
           item.variantId === variant.id
             ? {
                 ...item,
@@ -108,36 +109,33 @@ export function NewPurchasePage() {
                 lineTotal: item.unitCostPrice * newQuantity,
               }
             : item,
-        ),
-      );
-      toast(`Added +1 ${variant.productName}`, 'info');
-      return;
-    }
+        );
+      }
 
-    setCart([
-      ...cart,
-      {
-        variantId: variant.id,
-        productId: variant.productId,
-        productName: variant.productName,
-        variantName: variantLabel(variant),
-        brand: variant.brand,
-        unit: variant.unit,
-        quantity,
-        unitCostPrice: variant.costPrice,
-        lineTotal: variant.costPrice * quantity,
-      },
-    ]);
+      return [
+        ...current,
+        {
+          variantId: variant.id,
+          productId: variant.productId,
+          productName: variant.productName,
+          variantName: variantLabel(variant),
+          brand: variant.brand,
+          unit: variant.unit,
+          quantity,
+          unitCostPrice: variant.costPrice,
+          lineTotal: variant.costPrice * quantity,
+        },
+      ];
+    });
     toast(`Added ${variant.productName}`, 'info');
   };
 
   const updateQuantity = (variantId: string, quantity: number) => {
-    if (quantity < 1) {
-      setCart(cart.filter((item) => item.variantId !== variantId));
-      return;
-    }
-    setCart(
-      cart.map((item) =>
+    setCart((current) => {
+      if (quantity < 1) {
+        return current.filter((item) => item.variantId !== variantId);
+      }
+      return current.map((item) =>
         item.variantId === variantId
           ? {
               ...item,
@@ -145,14 +143,14 @@ export function NewPurchasePage() {
               lineTotal: item.unitCostPrice * quantity,
             }
           : item,
-      ),
-    );
+      );
+    });
   };
 
   const updateUnitCost = (variantId: string, unitCostPrice: number) => {
     const costKobo = toKobo(unitCostPrice);
-    setCart(
-      cart.map((item) =>
+    setCart((current) =>
+      current.map((item) =>
         item.variantId === variantId
           ? {
               ...item,
@@ -165,7 +163,7 @@ export function NewPurchasePage() {
   };
 
   const removeFromCart = (variantId: string) => {
-    setCart(cart.filter((item) => item.variantId !== variantId));
+    setCart((current) => current.filter((item) => item.variantId !== variantId));
   };
 
   const completePurchase = async () => {
@@ -343,30 +341,22 @@ export function NewPurchasePage() {
                       <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/50">
                         <div>
                           <span className="text-3xs text-text-muted uppercase block">Qty to receive</span>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <button
-                              type="button"
-                              onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
-                              className="w-6 h-6 rounded bg-surface border border-border flex items-center justify-center text-text-primary"
-                            >
-                              -
-                            </button>
-                            <span className="font-bold text-text-primary px-1">{item.quantity}</span>
-                            <button
-                              type="button"
-                              onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
-                              className="w-6 h-6 rounded bg-surface border border-border flex items-center justify-center text-text-primary"
-                            >
-                              +
-                            </button>
-                          </div>
+                          <QuantityInput
+                            value={item.quantity}
+                            onChange={(value) => updateQuantity(item.variantId, value)}
+                            min={1}
+                            ariaLabel={`Quantity of ${item.productName}`}
+                            className="mt-0.5"
+                          />
                         </div>
 
                         <div className="text-right">
                           <span className="text-3xs text-text-muted uppercase block">Unit Cost ({CURRENCY_SYMBOL})</span>
                           <input
                             type="number"
+                            min="0"
                             step="any"
+                            inputMode="decimal"
                             value={item.unitCostPrice / 100}
                             onChange={(e) => updateUnitCost(item.variantId, parseFloat(e.target.value) || 0)}
                             className="w-24 text-right px-2 py-1 rounded bg-surface border border-border font-bold text-text-primary outline-none text-xs"
@@ -391,6 +381,7 @@ export function NewPurchasePage() {
                   type="number"
                   min="0"
                   step="any"
+                  inputMode="decimal"
                   value={additionalCosts === 0 ? '' : additionalCosts}
                   onChange={(e) => setAdditionalCosts(parseFloat(e.target.value) || 0)}
                   placeholder="0.00"
@@ -427,6 +418,7 @@ export function NewPurchasePage() {
                   type="number"
                   min="0"
                   step="any"
+                  inputMode="decimal"
                   placeholder="0.00"
                   value={amountPaidInput}
                   onChange={(e) => setAmountPaidInput(e.target.value)}

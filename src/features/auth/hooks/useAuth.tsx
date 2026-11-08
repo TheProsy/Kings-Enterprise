@@ -11,7 +11,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config';
-import { PERMISSIONS, ROLES } from '@/constants';
+import { PERMISSIONS, ROLE_PERMISSIONS, ROLES } from '@/constants';
 import { BUSINESS } from '@/config/business';
 import { User } from '@/types';
 import { getAuthErrorMessage } from '@/features/auth/authErrors';
@@ -115,7 +115,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
     if (user.role === ROLES.OWNER) return true;
-    return Array.isArray(user.permissions) && user.permissions.includes(permission);
+    const permissions = Array.isArray(user.permissions)
+      ? user.permissions
+      : ROLE_PERMISSIONS[user.role as keyof typeof ROLE_PERMISSIONS] ?? [];
+    return permissions.includes(permission);
   };
 
   const resetPassword = async (email: string) => {

@@ -84,6 +84,7 @@ export interface Sale {
   receiptNumber: string;
   customerId?: string;
   customerPhone?: string;
+  customerAddress?: string;
   employeeId: string;
   employeeName?: string;
   items: SaleItem[];
@@ -98,6 +99,7 @@ export interface Sale {
   idempotencyKey?: string;
   customerName?: string;
   notes?: string;
+  returnedQuantities?: Record<string, number>;
   returnedTotalKobo?: number;
   returnStatus?: 'partially_returned' | 'returned';
   voided?: boolean;

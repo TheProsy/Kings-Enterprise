@@ -6,6 +6,11 @@ import { StatCard } from '@/components/ui/StatCard';
 import { DataTable } from '@/components/tables/DataTable';
 import { saleService, purchaseService, expenseService, paymentService } from '@/services';
 import { formatMoney, formatDate, toMillis } from '@/lib/formatters';
+import {
+  amountPaidAtSale,
+  isActiveInflowPayment,
+  saleLinkedPaymentTotals,
+} from '@/lib/payments';
 import { toast } from '@/lib/toast';
 import { ArrowDownLeft, ArrowUpRight, BookOpen } from 'lucide-react';
 
@@ -35,19 +40,26 @@ export function CashbookPage() {
       .then(([sales, purchases, expenses, payments]) => {
         if (!active) return;
 
+        const linkedPaymentTotals = saleLinkedPaymentTotals(payments);
+        const salesById = new Map(sales.map((sale) => [sale.id, sale]));
+
         const allEntries: CashbookEntry[] = [
           ...sales
-            .filter((sale) => sale.amountPaid > 0)
+            .filter((sale) => sale.status === 'completed')
             .map((sale) => ({
               id: `sale-${sale.id}`,
               date: sale.createdAt,
               description: `Sale #${sale.receiptNumber} (${sale.customerName || 'Walk-in'})`,
               type: 'in' as const,
-              amount: sale.amountPaid,
+              amount: amountPaidAtSale(sale, linkedPaymentTotals),
               reference: sale.paymentMethod || 'cash',
-            })),
+            }))
+            .filter((entry) => entry.amount > 0),
           ...purchases
-            .filter((purchase) => purchase.amountPaid > 0)
+            .filter(
+              (purchase) =>
+                purchase.status !== 'cancelled' && purchase.amountPaid > 0,
+            )
             .map((purchase) => ({
               id: `purchase-${purchase.id}`,
               date: purchase.createdAt,
@@ -64,16 +76,22 @@ export function CashbookPage() {
             amount: expense.amount,
             reference: expense.paymentMethod || 'cash',
           })),
-          ...payments.map((payment) => ({
-            id: `payment-${payment.id}`,
-            date: payment.createdAt,
-            description: payment.partyName
-              ? `${payment.direction === 'in' ? 'Customer Collection' : 'Supplier Payment'} - ${payment.partyName}`
-              : `${payment.direction === 'in' ? 'Customer Payment' : 'Supplier Payment'}`,
-            type: payment.direction,
-            amount: payment.amount,
-            reference: payment.paymentMethod || 'cash',
-          })),
+          ...payments
+            .filter(
+              (payment) =>
+                payment.direction === 'out' ||
+                isActiveInflowPayment(payment, salesById),
+            )
+            .map((payment) => ({
+              id: `payment-${payment.id}`,
+              date: payment.createdAt,
+              description: payment.partyName
+                ? `${payment.direction === 'in' ? 'Customer Collection' : 'Supplier Payment'} - ${payment.partyName}`
+                : `${payment.direction === 'in' ? 'Customer Payment' : 'Supplier Payment'}`,
+              type: payment.direction,
+              amount: payment.amount,
+              reference: payment.paymentMethod || 'cash',
+            })),
         ];
 
         allEntries.sort((a, b) => toMillis(b.date) - toMillis(a.date));

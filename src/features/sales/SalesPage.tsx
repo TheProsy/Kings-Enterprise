@@ -6,17 +6,19 @@ import { SearchInput } from '@/components/forms/SearchInput';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Input';
+import { Input, Select } from '@/components/ui/Input';
+import { PriceInput } from '@/components/ui/PriceInput';
+import { QuantityInput } from '@/components/ui/QuantityInput';
 import { Drawer } from '@/components/ui/Drawer';
 import { Modal } from '@/components/ui/Modal';
 import { checkoutService, catalogueService, customerService } from '@/services';
 import type { CatalogueItem } from '@/services';
 import type { Customer, PaymentMethod } from '@/types';
-import { formatMoney, toKobo } from '@/lib/formatters';
+import { formatMoney, fromKobo, toKobo } from '@/lib/formatters';
 import { PAYMENT_METHODS, ROUTES, CURRENCY_SYMBOL, buildRoute } from '@/constants';
 import { useAuth } from '@/features/auth';
 import { toast } from '@/lib/toast';
-import { Plus, Minus, Trash2, CreditCard, Wallet, Phone, ShoppingCart, Receipt, Check, ChevronUp, Boxes } from 'lucide-react';
+import { Trash2, CreditCard, Wallet, Phone, ShoppingCart, Receipt, Check, ChevronUp, Boxes } from 'lucide-react';
 import { cn } from '@/lib/utilities';
 
 interface CartItem {
@@ -52,6 +54,9 @@ export function SalesPage() {
   const [amountPaidInput, setAmountPaidInput] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [customerId, setCustomerId] = useState('');
+  const [customerNameInput, setCustomerNameInput] = useState('');
+  const [customerPhoneInput, setCustomerPhoneInput] = useState('');
+  const [customerAddressInput, setCustomerAddressInput] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingCatalogue, setLoadingCatalogue] = useState(true);
@@ -108,6 +113,9 @@ export function SalesPage() {
     setCart([]);
     setAmountPaidInput('');
     setCustomerId('');
+    setCustomerNameInput('');
+    setCustomerPhoneInput('');
+    setCustomerAddressInput('');
     setNotes('');
     setPaymentMethod('cash');
     setMobileCartOpen(false);
@@ -176,6 +184,32 @@ export function SalesPage() {
     });
   }, []);
 
+  const updatePrice = useCallback((variantId: string, nairaPrice: number) => {
+    const priceKobo = Math.max(0, toKobo(nairaPrice));
+    setCart((current) =>
+      current.map((entry) =>
+        entry.variantId === variantId
+          ? {
+              ...entry,
+              unitSellingPrice: priceKobo,
+              lineTotal: priceKobo * entry.quantity,
+            }
+          : entry,
+      ),
+    );
+  }, []);
+
+  const handleCustomerChange = useCallback(
+    (nextCustomerId: string) => {
+      setCustomerId(nextCustomerId);
+      const customer = customers.find((entry) => entry.id === nextCustomerId);
+      setCustomerNameInput(customer?.name || '');
+      setCustomerPhoneInput(customer?.phone || '');
+      setCustomerAddressInput(customer?.address || '');
+    },
+    [customers],
+  );
+
   const removeFromCart = useCallback((variantId: string) => {
     setCart((current) => current.filter((item) => item.variantId !== variantId));
   }, []);
@@ -212,7 +246,9 @@ export function SalesPage() {
         amountPaid: Math.min(amountPaid, total),
         paymentMethod,
         customerId: customerId || undefined,
-        customerName: customer?.name,
+        customerName: customer?.name || customerNameInput.trim() || undefined,
+        customerPhone: customer?.phone || customerPhoneInput.trim() || undefined,
+        customerAddress: customer?.address || customerAddressInput.trim() || undefined,
         employeeId: user?.id || firebaseUser?.uid || 'unknown',
         employeeName: user?.name || firebaseUser?.email || 'Staff',
         notes: notes.trim() || undefined,
@@ -262,43 +298,17 @@ export function SalesPage() {
             {cart.map((item) => (
               <li
                 key={item.variantId}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-2 p-3"
+                className="rounded-xl border border-border bg-surface-2 p-3"
               >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold leading-tight text-text-primary">
-                    {item.productName}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-text-muted">
-                    {item.variantName} · {formatMoney(item.unitSellingPrice)}/{item.unit}
-                  </p>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-1 rounded-lg border border-border bg-surface p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
-                    className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary"
-                    aria-label={`Decrease quantity of ${item.productName}`}
-                  >
-                    <Minus className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
-                  <span className="w-8 text-center text-sm font-bold tabular-nums text-text-primary">
-                    {item.quantity}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
-                    className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary"
-                    aria-label={`Increase quantity of ${item.productName}`}
-                  >
-                    <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                  </button>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="whitespace-nowrap text-sm font-bold tabular-nums text-text-primary">
-                    {formatMoney(item.lineTotal)}
-                  </span>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold leading-tight text-text-primary">
+                      {item.productName}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-text-muted">
+                      {item.variantName} · {item.stock} {item.unit} available
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeFromCart(item.variantId)}
@@ -307,6 +317,44 @@ export function SalesPage() {
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
+                  <div className="w-28 shrink-0">
+                    <label
+                      htmlFor={`pos-price-${item.variantId}`}
+                      className="mb-0.5 block text-3xs font-semibold uppercase tracking-wider text-text-muted"
+                    >
+                      Unit Price
+                    </label>
+                    <PriceInput
+                      id={`pos-price-${item.variantId}`}
+                      value={fromKobo(item.unitSellingPrice)}
+                      onChange={(value) => updatePrice(item.variantId, value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <div className="shrink-0">
+                    <span className="mb-0.5 block text-3xs font-semibold uppercase tracking-wider text-text-muted">
+                      Quantity
+                    </span>
+                    <QuantityInput
+                      value={item.quantity}
+                      onChange={(value) => updateQuantity(item.variantId, value)}
+                      max={item.stock}
+                      ariaLabel={`Quantity of ${item.productName}`}
+                    />
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <span className="mb-0.5 block text-3xs font-semibold uppercase tracking-wider text-text-muted">
+                      Line Total
+                    </span>
+                    <span className="block text-sm font-bold tabular-nums text-text-primary">
+                      {formatMoney(item.lineTotal)}
+                    </span>
+                  </div>
                 </div>
               </li>
             ))}
@@ -341,29 +389,64 @@ export function SalesPage() {
           </div>
         </div>
 
-        <div>
-          <label
-            htmlFor="pos-customer"
-            className="mb-1.5 block text-xs font-semibold text-text-secondary"
-          >
-            Customer Account
-          </label>
-          <Select
-            id="pos-customer"
-            options={[
-              { value: '', label: 'Walk-in Customer (Instant Cash/POS)' },
-              ...customers.map((customer) => ({
-                value: customer.id,
-                label: `${customer.name}${
-                  customer.balanceDue > 0
-                    ? ` (Owes ${formatMoney(customer.balanceDue)})`
-                    : ''
-                }`,
-              })),
-            ]}
-            value={customerId}
-            onChange={(event) => setCustomerId(event.target.value)}
+        <div className="space-y-2">
+          <div>
+            <label
+              htmlFor="pos-customer"
+              className="mb-1.5 block text-xs font-semibold text-text-secondary"
+            >
+              Customer Account
+            </label>
+            <Select
+              id="pos-customer"
+              options={[
+                { value: '', label: 'Walk-in Customer (Instant Cash/POS)' },
+                ...customers.map((customer) => ({
+                  value: customer.id,
+                  label: `${customer.name}${
+                    customer.balanceDue > 0
+                      ? ` (Owes ${formatMoney(customer.balanceDue)})`
+                      : ''
+                  }`,
+                })),
+              ]}
+              value={customerId}
+              onChange={(event) => handleCustomerChange(event.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Input
+              label="Customer Name"
+              value={customerNameInput}
+              onChange={(event) => setCustomerNameInput(event.target.value)}
+              placeholder="Walk-in name (optional)"
+              disabled={Boolean(customerId)}
+            />
+            <Input
+              label="Phone Number"
+              type="tel"
+              inputMode="tel"
+              value={customerPhoneInput}
+              onChange={(event) => setCustomerPhoneInput(event.target.value)}
+              placeholder="0803 000 0000"
+              disabled={Boolean(customerId)}
+            />
+          </div>
+
+          <Input
+            label="Address"
+            value={customerAddressInput}
+            onChange={(event) => setCustomerAddressInput(event.target.value)}
+            placeholder="Delivery address (optional)"
+            disabled={Boolean(customerId)}
           />
+
+          {customerId ? (
+            <p className="text-2xs text-text-muted">
+              Using the saved name, phone and address from the selected customer account.
+            </p>
+          ) : null}
         </div>
 
         <div>
@@ -668,8 +751,8 @@ export function SalesPage() {
             ) : null}
           </div>
           <p className="text-xs text-text-muted">
-            A PDF copy is prepared in the background. Open the receipt to print, share, download
-            or issue payment, return and void documents.
+            Open the receipt to print it, save a PDF copy, share it, or issue payment,
+            return and void documents.
           </p>
           <div className="flex justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => setLastReceipt(null)}>

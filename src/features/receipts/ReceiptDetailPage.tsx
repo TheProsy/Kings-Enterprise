@@ -7,13 +7,13 @@ import { Modal } from '@/components/ui/Modal';
 import { Input, Select, Textarea } from '@/components/ui/Input';
 import { PanelSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { receiptService } from '@/services';
+import { receiptService, saleService } from '@/services';
 import { buildRoute, PAYMENT_METHODS, PERMISSIONS, ROUTES } from '@/constants';
 import { formatDateTime, formatMoney, toKobo } from '@/lib/formatters';
 import { paymentMethodLabel, paymentStatusLabel, receiptTypeLabel } from '@/lib/receipts';
 import { useAuth } from '@/features/auth';
 import { toast } from '@/lib/toast';
-import type { Receipt } from '@/types';
+import type { Receipt, ReceiptItem, Sale } from '@/types';
 import { ReceiptDocument } from './ReceiptDocument';
 import {
   ArrowLeft,
@@ -51,12 +51,21 @@ const STATUS_VARIANT: Record<string, 'success' | 'warning' | 'danger' | 'info'> 
   refunded: 'info',
 };
 
+function returnableQuantity(item: ReceiptItem, sale: Sale | null): number {
+  const returned = Number(
+    sale?.returnedQuantities?.[`${item.productId}:${item.variantId}`] ?? 0,
+  );
+  return Math.max(0, Number(item.quantity || 0) - returned);
+}
+
 export function ReceiptDetailPage() {
   const { receiptId = '' } = useParams();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
 
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [sale, setSale] = useState<Sale | null>(null);
+  const [liveBalance, setLiveBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [paperFormat, setPaperFormat] = useState<PaperFormat>('a4');
@@ -89,13 +98,22 @@ export function ReceiptDetailPage() {
       if (!data) {
         setNotFound(true);
       } else {
+        let balance = Number(data.balanceDueKobo || 0);
+        if (data.saleId) {
+          try {
+            const linkedSale = await saleService.get(data.saleId);
+            if (linkedSale) {
+              setSale(linkedSale);
+              balance = Math.max(0, Number(linkedSale.balanceDue || 0));
+            }
+          } catch (error) {
+            console.error(error);
+          }
+        }
         setReceipt(data);
+        setLiveBalance(balance);
         setNotFound(false);
-        setPaymentAmount(
-          Number(data.balanceDueKobo || 0) > 0
-            ? (Number(data.balanceDueKobo || 0) / 100).toFixed(2)
-            : '',
-        );
+        setPaymentAmount(balance > 0 ? (balance / 100).toFixed(2) : '');
       }
     } catch (error) {
       console.error(error);
@@ -121,17 +139,33 @@ export function ReceiptDetailPage() {
     hasPermission(PERMISSIONS.RECEIPTS_REFUND);
   const canVoid = hasPermission(PERMISSIONS.SALES_CANCEL) || hasPermission(PERMISSIONS.RECEIPTS_VOID);
 
-  const collectibleItems = useMemo(() => receipt?.items || [], [receipt]);
+  const collectibleItems = useMemo<ReceiptItem[]>(() => {
+    if (sale?.items?.length) {
+      return sale.items.map((item) => ({
+        productId: item.productId,
+        productName: item.productName,
+        variantId: item.variantId,
+        variationName: item.variantName,
+        unit: item.unit,
+        quantity: item.quantity,
+        unitPriceKobo: item.unitSellingPrice,
+        lineTotalKobo: item.lineTotal,
+      }));
+    }
+    return receipt?.items || [];
+  }, [sale, receipt]);
+
+  const returnableQuantityFor = (item: ReceiptItem) => returnableQuantity(item, sale);
 
   const returnTotal = useMemo(() => {
     return collectibleItems.reduce((sum, item) => {
       const quantity = Math.min(
         Number(returnQuantities[item.variantId] || 0),
-        Number(item.quantity || 0),
+        returnableQuantity(item, sale),
       );
       return sum + quantity * Number(item.unitPriceKobo || 0);
     }, 0);
-  }, [collectibleItems, returnQuantities]);
+  }, [collectibleItems, returnQuantities, sale]);
 
   const whatsappMessage = useMemo(() => {
     if (!receipt) return '';
@@ -141,12 +175,12 @@ export function ReceiptDetailPage() {
       `${receiptTypeLabel(receipt.receiptType)} ${receipt.receiptNumber}`,
       `Total: ${formatMoney(receipt.totalKobo || 0)}`,
       `Paid: ${formatMoney(receipt.amountPaidKobo || 0)}`,
-      `Balance: ${formatMoney(receipt.balanceDueKobo || 0)}`,
+      `Balance: ${formatMoney(liveBalance ?? Number(receipt.balanceDueKobo || 0))}`,
       receipt.issuedDateLabel ? `Issued: ${receipt.issuedDateLabel}` : '',
     ]
       .filter(Boolean)
       .join('\n');
-  }, [receipt]);
+  }, [receipt, liveBalance]);
 
   const handleShare = async () => {
     if (!receipt) return;
@@ -188,7 +222,7 @@ export function ReceiptDetailPage() {
       toast('Enter a payment amount greater than zero.', 'warning');
       return;
     }
-    if (amount > Number(receipt.balanceDueKobo || 0)) {
+    if (amount > (liveBalance ?? Number(receipt.balanceDueKobo || 0))) {
       toast('Payment cannot exceed the outstanding balance.', 'warning');
       return;
     }
@@ -228,7 +262,9 @@ export function ReceiptDetailPage() {
         return {
           productId: item?.productId || '',
           variantId,
-          quantity: Number(quantity),
+          quantity: item
+            ? Math.min(Number(quantity), returnableQuantityFor(item))
+            : 0,
         };
       })
       .filter((item) => item.productId && item.quantity > 0);
@@ -321,8 +357,11 @@ export function ReceiptDetailPage() {
     );
   }
 
-  const isSaleReceipt = receipt.receiptType === 'sale';
-  const outstanding = Number(receipt.balanceDueKobo || 0);
+  const canManageSale =
+    Boolean(receipt.saleId) &&
+    receipt.receiptType !== 'void' &&
+    receipt.documentStatus !== 'voided';
+  const outstanding = liveBalance ?? Number(receipt.balanceDueKobo || 0);
   const saleLinkReceiptId = receipt.originalReceiptId;
 
   return (
@@ -442,7 +481,7 @@ export function ReceiptDetailPage() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => navigate(`${ROUTES.APP_SALES}?search=${encodeURIComponent(receipt.saleReceiptNumber || '')}`)}
+                  onClick={() => navigate(`${ROUTES.APP_SALES}?search=${encodeURIComponent(receipt.saleReceiptNumber || receipt.receiptNumber || '')}`)}
                 >
                   View sale
                 </Button>
@@ -465,7 +504,7 @@ export function ReceiptDetailPage() {
             </div>
           </div>
 
-          {isSaleReceipt && receipt.documentStatus !== 'voided' ? (
+          {canManageSale ? (
             <div className="rounded-xl border border-border bg-surface p-4 shadow-xs">
               <h2 className="text-sm font-bold text-text-primary">Actions</h2>
               <p className="mt-1 text-xs text-text-muted">
@@ -492,7 +531,7 @@ export function ReceiptDetailPage() {
                     Record Return
                   </Button>
                 ) : null}
-                {canVoid ? (
+                {canVoid && !sale?.returnStatus ? (
                   <Button
                     size="sm"
                     variant="danger"
@@ -505,7 +544,7 @@ export function ReceiptDetailPage() {
                     Void Sale
                   </Button>
                 ) : null}
-                {!canManagePayments && !canReturn && !canVoid ? (
+                {!canManagePayments && !canReturn && (!canVoid || sale?.returnStatus) ? (
                   <p className="text-xs text-text-muted">
                     You do not have permission to issue linked documents for this sale.
                   </p>
@@ -596,38 +635,42 @@ export function ReceiptDetailPage() {
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            {collectibleItems.map((item) => (
-              <div
-                key={item.variantId}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 p-3"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-text-primary">{item.productName}</p>
-                  <p className="text-xs text-text-muted">
-                    {item.variationName || 'Standard'} · Sold {item.quantity} {item.unit} @{' '}
-                    {formatMoney(item.unitPriceKobo || 0)}
-                  </p>
+            {collectibleItems.map((item) => {
+              const remaining = returnableQuantityFor(item);
+              if (remaining <= 0) return null;
+              return (
+                <div
+                  key={item.variantId}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-text-primary">{item.productName}</p>
+                    <p className="text-xs text-text-muted">
+                      {item.variationName || 'Standard'} · Sold {item.quantity} {item.unit} @{' '}
+                      {formatMoney(item.unitPriceKobo || 0)} · Returnable {remaining}
+                    </p>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    max={remaining}
+                    value={returnQuantities[item.variantId] ?? 0}
+                    onChange={(event) => {
+                      const value = Math.min(
+                        Math.max(0, parseInt(event.target.value, 10) || 0),
+                        remaining,
+                      );
+                      setReturnQuantities((current) => ({
+                        ...current,
+                        [item.variantId]: value,
+                      }));
+                    }}
+                    className="h-10 w-24 rounded-lg border border-border-strong bg-surface px-3 text-right text-sm font-semibold text-text-primary outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+                    aria-label={`Return quantity for ${item.productName}`}
+                  />
                 </div>
-                <input
-                  type="number"
-                  min="0"
-                  max={item.quantity}
-                  value={returnQuantities[item.variantId] ?? 0}
-                  onChange={(event) => {
-                    const value = Math.min(
-                      Math.max(0, parseInt(event.target.value, 10) || 0),
-                      item.quantity,
-                    );
-                    setReturnQuantities((current) => ({
-                      ...current,
-                      [item.variantId]: value,
-                    }));
-                  }}
-                  className="h-10 w-24 rounded-lg border border-border-strong bg-surface px-3 text-right text-sm font-semibold text-text-primary outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
-                  aria-label={`Return quantity for ${item.productName}`}
-                />
-              </div>
-            ))}
+              );
+            })}
           </div>
           <Textarea
             label="Return reason"

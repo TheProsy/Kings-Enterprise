@@ -62,6 +62,8 @@ export interface CreateSaleInput {
   paymentMethod: string;
   customerId?: string;
   customerName?: string;
+  customerPhone?: string;
+  customerAddress?: string;
   employeeId: string;
   employeeName: string;
   notes?: string;
@@ -300,12 +302,17 @@ function saleCustomerSnapshot(
   input: CreateSaleInput,
   customer: PlainRecord | null,
 ): ReceiptCustomerSnapshot {
+  const name =
+    String(customer?.name || input.customerName || '').trim() ||
+    DEFAULT_WALK_IN_CUSTOMER;
+  const phone = String(customer?.phone || input.customerPhone || '').trim();
+  const address = String(
+    customer?.address || input.customerAddress || '',
+  ).trim();
   return cleanUndefined({
-    name: String(
-      customer?.name || input.customerName || DEFAULT_WALK_IN_CUSTOMER,
-    ),
-    phone: customer?.phone ? String(customer.phone) : undefined,
-    address: customer?.address ? String(customer.address) : undefined,
+    name,
+    phone: phone || undefined,
+    address: address || undefined,
   });
 }
 
@@ -400,7 +407,12 @@ export async function createSaleReceipt(
         throw new Error(`Not enough stock for ${item.productName}.`);
       }
 
-      const unitSellingPrice = Number(variant.sellingPrice ?? 0);
+      const requestedUnitPrice = Number(item.unitSellingPrice);
+      const variantUnitPrice = Number(variant.sellingPrice ?? 0);
+      const unitSellingPrice =
+        Number.isFinite(requestedUnitPrice) && requestedUnitPrice >= 0
+          ? money(requestedUnitPrice)
+          : variantUnitPrice;
       if (!Number.isFinite(unitSellingPrice) || unitSellingPrice < 0) {
         throw new Error(`Invalid selling price for ${item.productName}.`);
       }
@@ -462,6 +474,8 @@ export async function createSaleReceipt(
       employeeName: staffDisplayName(profile),
       customerId: input.customerId,
       customerName,
+      customerPhone: customerData?.phone || input.customerPhone,
+      customerAddress: customerData?.address || input.customerAddress,
       items: lineItems.map(
         ({
           variantRef: _variantRef,

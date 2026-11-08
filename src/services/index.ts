@@ -301,6 +301,10 @@ export const saleService = {
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as Sale));
   },
+  async get(id: string) {
+    const snap = await getDoc(doc(db, `businesses/${BUSINESS_ID}/sales/${id}`));
+    return snap.exists() ? ({ id: snap.id, ...snap.data() } as Sale) : null;
+  },
   async create(data: Omit<Sale, 'id'>) {
     const id = generateId();
     await setDoc(doc(db, `businesses/${BUSINESS_ID}/sales/${id}`), { ...data, id, createdAt: serverTimestamp() });
@@ -371,6 +375,8 @@ export const checkoutService = {
     paymentMethod: string;
     customerId?: string;
     customerName?: string;
+    customerPhone?: string;
+    customerAddress?: string;
     employeeId: string;
     employeeName: string;
     notes?: string;
@@ -469,6 +475,7 @@ export const checkoutService = {
         supplierId: input.supplierId,
         supplierName: input.supplierName,
         employeeId: input.employeeId,
+        paymentMethod: input.paymentMethod,
         items: lineItems.map(({ variantRef: _variantRef, previousQuantity: _previousQuantity, newQuantity: _newQuantity, ...rest }) => rest),
         subtotal,
         additionalCosts,

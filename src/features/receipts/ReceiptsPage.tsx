@@ -94,19 +94,32 @@ export function ReceiptsPage() {
   }, [receipts, search, typeFilter, statusFilter, startDate, endDate]);
 
   const stats = useMemo(() => {
-    return receipts.reduce(
-      (summary, receipt) => {
-        if (receipt.documentStatus !== 'voided') {
-          summary.collected += Number(receipt.amountPaidKobo || 0);
-          summary.outstanding += Number(receipt.balanceDueKobo || 0);
+    const latestBySale = new Map<string, Receipt>();
+    receipts.forEach((receipt) => {
+      if (receipt.documentStatus === 'voided' || !receipt.saleId) return;
+      const stamp = toMillis(receipt.issuedAt || receipt.createdAt);
+      const existing = latestBySale.get(receipt.saleId);
+      const existingStamp = existing
+        ? toMillis(existing.issuedAt || existing.createdAt)
+        : -1;
+      if (!existing || stamp > existingStamp) {
+        latestBySale.set(receipt.saleId, receipt);
+      }
+    });
+
+    return {
+      collected: receipts.reduce((sum, receipt) => {
+        if (receipt.documentStatus === 'voided') return sum;
+        if (receipt.receiptType !== 'sale' && receipt.receiptType !== 'payment') {
+          return sum;
         }
-        return summary;
-      },
-      {
-        collected: 0,
-        outstanding: 0,
-      },
-    );
+        return sum + Number(receipt.amountPaidKobo || 0);
+      }, 0),
+      outstanding: Array.from(latestBySale.values()).reduce(
+        (sum, receipt) => sum + Number(receipt.balanceDueKobo || 0),
+        0,
+      ),
+    };
   }, [receipts]);
 
   const typeOptions: Array<{ value: TypeFilter; label: string; count?: number }> = [

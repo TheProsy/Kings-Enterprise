@@ -18,8 +18,15 @@ export function SalesReportPage() {
   const loadData = useCallback(async () => {
     try {
       const data = await saleService.list();
-      setSales(data);
-      setTotal(data.reduce((sum, s) => sum + (s.total || 0), 0));
+      const completedSales = data.filter((sale) => sale.status === 'completed');
+      setSales(completedSales);
+      setTotal(
+        completedSales.reduce(
+          (sum, sale) =>
+            sum + Math.max(0, (sale.total || 0) - (sale.returnedTotalKobo || 0)),
+          0,
+        ),
+      );
     } catch (err) {
       console.error('Failed to load sales report data:', err);
     } finally {

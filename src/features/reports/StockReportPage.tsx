@@ -41,7 +41,7 @@ export function StockReportPage() {
     0,
   );
   const lowStockItems = items.filter(
-    (item) => item.quantityOnHand <= item.minimumStock,
+    (item) => item.active && item.quantityOnHand <= item.minimumStock,
   );
 
   const columns: Column<CatalogueItem>[] = [

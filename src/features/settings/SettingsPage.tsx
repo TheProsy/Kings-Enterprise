@@ -8,7 +8,8 @@ import { PanelSkeleton } from '@/components/ui/Skeleton';
 import { Package, CreditCard, Palette, Lock, History, Check, Building2, Receipt, Sun, Moon } from 'lucide-react';
 import { authService, settingsService } from '@/services';
 import { BUSINESS } from '@/config/business';
-import { ROUTES } from '@/constants';
+import { PERMISSIONS, ROUTES } from '@/constants';
+import { useAuth } from '@/features/auth';
 import { DEFAULT_RECEIPT_SETTINGS, normalizeReceiptSettings } from '@/lib/receipts';
 import { toast } from '@/lib/toast';
 import { useTheme } from '@/contexts/useTheme';
@@ -63,6 +64,8 @@ const DEFAULT_PAYMENTS: PaymentSettings = {
 
 export function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission(PERMISSIONS.SETTINGS_EDIT);
   const [activeTab, setActiveTab] = useState<SettingsTab>('business');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -228,15 +231,17 @@ export function SettingsPage() {
                   rows={2}
                 />
                 <div className="flex justify-end pt-3 border-t border-border/60">
-                  <Button
-                    variant="primary"
-                    onClick={() => saveSettings('general', general)}
-                    isLoading={saving}
-                    className="shadow-xs font-semibold"
-                  >
-                    <Check className="h-4 w-4 mr-1.5" />
-                    Save Changes
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="primary"
+                      onClick={() => saveSettings('general', general)}
+                      isLoading={saving}
+                      className="shadow-xs font-semibold"
+                    >
+                      <Check className="h-4 w-4 mr-1.5" />
+                      Save Changes
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -303,7 +308,7 @@ export function SettingsPage() {
                     value={receipt.logoUrl || ''}
                     onChange={(e) => setReceipt({ ...receipt, logoUrl: e.target.value })}
                     placeholder="https://.../logo.png"
-                    helper="PNG or JPG up to 1.5MB; embedded into each PDF."
+                    helper="Direct link to a hosted PNG or JPG logo; shown on receipts and printouts."
                   />
                   <Input
                     label="Registration Number (optional)"
@@ -440,23 +445,25 @@ export function SettingsPage() {
                 </p>
 
                 <div className="flex justify-end pt-3 border-t border-border/60">
-                  <Button
-                    variant="primary"
-                    onClick={() =>
-                      saveSettings('receipt', {
-                        ...receipt,
-                        receiptPrefix: receipt.receiptPrefix.toUpperCase(),
-                        paymentPrefix: receipt.paymentPrefix.toUpperCase(),
-                        returnPrefix: receipt.returnPrefix.toUpperCase(),
-                        voidPrefix: receipt.voidPrefix.toUpperCase(),
-                      })
-                    }
-                    isLoading={saving}
-                    className="shadow-xs font-semibold"
-                  >
-                    <Check className="h-4 w-4 mr-1.5" />
-                    Save Receipt Settings
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="primary"
+                      onClick={() =>
+                        saveSettings('receipt', {
+                          ...receipt,
+                          receiptPrefix: receipt.receiptPrefix.toUpperCase(),
+                          paymentPrefix: receipt.paymentPrefix.toUpperCase(),
+                          returnPrefix: receipt.returnPrefix.toUpperCase(),
+                          voidPrefix: receipt.voidPrefix.toUpperCase(),
+                        })
+                      }
+                      isLoading={saving}
+                      className="shadow-xs font-semibold"
+                    >
+                      <Check className="h-4 w-4 mr-1.5" />
+                      Save Receipt Settings
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -488,15 +495,17 @@ export function SettingsPage() {
                   helper="Items with stock at or below this value trigger low-stock alerts."
                 />
                 <div className="flex justify-end pt-3 border-t border-border/60">
-                  <Button
-                    variant="primary"
-                    onClick={() => saveSettings('inventory', inventory)}
-                    isLoading={saving}
-                    className="shadow-xs font-semibold"
-                  >
-                    <Check className="h-4 w-4 mr-1.5" />
-                    Save Inventory Rules
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="primary"
+                      onClick={() => saveSettings('inventory', inventory)}
+                      isLoading={saving}
+                      className="shadow-xs font-semibold"
+                    >
+                      <Check className="h-4 w-4 mr-1.5" />
+                      Save Inventory Rules
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -554,15 +563,17 @@ export function SettingsPage() {
                 </label>
 
                 <div className="flex justify-end pt-3 border-t border-border/60">
-                  <Button
-                    variant="primary"
-                    onClick={() => saveSettings('payments', payments)}
-                    isLoading={saving}
-                    className="shadow-xs font-semibold"
-                  >
-                    <Check className="h-4 w-4 mr-1.5" />
-                    Save Payment Options
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="primary"
+                      onClick={() => saveSettings('payments', payments)}
+                      isLoading={saving}
+                      className="shadow-xs font-semibold"
+                    >
+                      <Check className="h-4 w-4 mr-1.5" />
+                      Save Payment Options
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -1,26 +1,35 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { DataTable } from '@/components/tables/DataTable';
-import { purchaseService } from '@/services';
+import { purchaseService, paymentService } from '@/services';
 import { formatMoney, formatDate } from '@/lib/formatters';
-import { ROUTES } from '@/constants';
+import { purchaseBalancesAfterPayments } from '@/lib/payments';
+import { PERMISSIONS, ROUTES } from '@/constants';
+import { useAuth } from '@/features/auth';
 import { toast } from '@/lib/toast';
-import type { Purchase } from '@/types';
+import type { Payment, Purchase } from '@/types';
 import { Plus, Truck } from 'lucide-react';
 
 export function PurchasesPage() {
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission(PERMISSIONS.PURCHASES_CREATE);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   const loadData = useCallback(async () => {
     try {
-      const data = await purchaseService.list();
+      const [data, paymentList] = await Promise.all([
+        purchaseService.list(),
+        paymentService.list(),
+      ]);
       setPurchases(data);
+      setPayments(paymentList.filter((payment) => payment.direction === 'out'));
     } catch (error) {
       console.error(error);
       toast('Could not load purchases.', 'error');
@@ -32,6 +41,11 @@ export function PurchasesPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const purchaseBalances = useMemo(
+    () => purchaseBalancesAfterPayments(purchases, payments),
+    [purchases, payments],
+  );
 
   const filteredPurchases = purchases.filter((p) => {
     const q = search.toLowerCase();
@@ -101,15 +115,18 @@ export function PurchasesPage() {
       header: 'Supplier Debt',
       headerClassName: 'text-right',
       className: 'text-right',
-      render: (p: Purchase) => (
-        <span
-          className={`text-xs font-bold ${
-            p.balanceDue > 0 ? 'text-danger-fg' : 'text-success-fg'
-          }`}
-        >
-          {p.balanceDue > 0 ? formatMoney(p.balanceDue) : 'Settled'}
-        </span>
-      ),
+      render: (p: Purchase) => {
+        const balance = purchaseBalances.get(p.id) ?? p.balanceDue;
+        return (
+          <span
+            className={`text-xs font-bold ${
+              balance > 0 ? 'text-danger-fg' : 'text-success-fg'
+            }`}
+          >
+            {balance > 0 ? formatMoney(balance) : 'Settled'}
+          </span>
+        );
+      },
     },
     {
       key: 'status',
@@ -117,7 +134,7 @@ export function PurchasesPage() {
       render: (p: Purchase) => (
         <Badge
           variant={
-            p.status === 'received'
+            p.status === 'received' || p.status === 'completed'
               ? 'success'
               : p.status === 'ordered'
               ? 'info'
@@ -136,12 +153,14 @@ export function PurchasesPage() {
         title="Supplier Purchases & Stock Intake"
         description="Track incoming bulk inventory, shipments from suppliers, and payment obligations."
         action={
-          <Button asChild className="shadow-xs">
-            <NavLink to={ROUTES.APP_PURCHASES_NEW}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              New Purchase
-            </NavLink>
-          </Button>
+          canCreate ? (
+            <Button asChild className="shadow-xs">
+              <NavLink to={ROUTES.APP_PURCHASES_NEW}>
+                <Plus className="h-4 w-4 mr-1.5" />
+                New Purchase
+              </NavLink>
+            </Button>
+          ) : undefined
         }
       />
 
@@ -163,7 +182,9 @@ export function PurchasesPage() {
             ? 'No purchases match your search.'
             : 'No inventory intake records found. Click "New Purchase" to receive stock from a supplier.'
         }
-        mobileCardRender={(p) => (
+        mobileCardRender={(p) => {
+          const balance = purchaseBalances.get(p.id) ?? p.balanceDue;
+          return (
           <div className="space-y-2.5">
             <div className="flex items-start justify-between">
               <div>
@@ -173,7 +194,13 @@ export function PurchasesPage() {
                 </p>
                 <p className="text-xs text-text-secondary mt-0.5">{p.supplierName || 'Unknown Supplier'}</p>
               </div>
-              <Badge variant={p.status === 'received' ? 'success' : 'info'}>
+              <Badge
+                variant={
+                  p.status === 'received' || p.status === 'completed'
+                    ? 'success'
+                    : 'info'
+                }
+              >
                 {p.status}
               </Badge>
             </div>
@@ -187,10 +214,10 @@ export function PurchasesPage() {
                 <span className="text-text-muted block">Owed to Supplier:</span>
                 <span
                   className={`font-bold text-sm ${
-                    p.balanceDue > 0 ? 'text-danger-fg' : 'text-success-fg'
+                    balance > 0 ? 'text-danger-fg' : 'text-success-fg'
                   }`}
                 >
-                  {p.balanceDue > 0 ? formatMoney(p.balanceDue) : 'Fully settled'}
+                  {balance > 0 ? formatMoney(balance) : 'Fully settled'}
                 </span>
               </div>
             </div>
@@ -200,7 +227,8 @@ export function PurchasesPage() {
               <span>{p.items?.length || 0} material variants</span>
             </div>
           </div>
-        )}
+          );
+        }}
       />
     </div>
   );

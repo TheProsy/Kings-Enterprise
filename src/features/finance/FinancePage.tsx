@@ -13,6 +13,11 @@ import {
   paymentService,
 } from '@/services';
 import { formatMoney } from '@/lib/formatters';
+import {
+  amountPaidAtSale,
+  isActiveInflowPayment,
+  saleLinkedPaymentTotals,
+} from '@/lib/payments';
 import { ROUTES } from '@/constants';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { ArrowDownLeft, ArrowUpRight, Building2, Users, ChevronRight, BookOpen, TrendingUp } from 'lucide-react';
@@ -34,18 +39,27 @@ export function FinancePage() {
           paymentService.list(),
         ]);
 
-      const customerPayments = payments
-        .filter((payment) => payment.direction === 'in')
-        .reduce((sum, payment) => sum + payment.amount, 0);
       const supplierPayments = payments
         .filter((payment) => payment.direction === 'out')
         .reduce((sum, payment) => sum + payment.amount, 0);
 
+      const linkedPaymentTotals = saleLinkedPaymentTotals(payments);
+      const salesById = new Map(sales.map((sale) => [sale.id, sale]));
       const moneyReceived =
-        sales.reduce((sum, s) => sum + s.amountPaid, 0) + customerPayments;
+        sales
+          .filter((sale) => sale.status === 'completed')
+          .reduce(
+            (sum, sale) => sum + amountPaidAtSale(sale, linkedPaymentTotals),
+            0,
+          ) +
+        payments
+          .filter((payment) => isActiveInflowPayment(payment, salesById))
+          .reduce((sum, payment) => sum + payment.amount, 0);
       const moneySpent =
-        purchases.reduce((sum, p) => sum + p.amountPaid, 0) +
-        expenses.reduce((sum, e) => sum + e.amount, 0) +
+        purchases
+          .filter((purchase) => purchase.status !== 'cancelled')
+          .reduce((sum, purchase) => sum + purchase.amountPaid, 0) +
+        expenses.reduce((sum, expense) => sum + expense.amount, 0) +
         supplierPayments;
       const customerDebts = customers.reduce((sum, c) => sum + (c.balanceDue || 0), 0);
       const supplierDebts = suppliers.reduce((sum, s) => sum + (s.balanceDue || 0), 0);

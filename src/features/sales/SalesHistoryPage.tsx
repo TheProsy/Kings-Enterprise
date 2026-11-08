@@ -7,7 +7,8 @@ import { SearchInput } from '@/components/forms/SearchInput';
 import { DataTable } from '@/components/tables/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { saleService } from '@/services';
-import { ROUTES, buildRoute } from '@/constants';
+import { PERMISSIONS, ROUTES, buildRoute } from '@/constants';
+import { useAuth } from '@/features/auth';
 import { formatMoney, formatDate, formatDateTime } from '@/lib/formatters';
 import { toast } from '@/lib/toast';
 import type { Sale } from '@/types';
@@ -15,6 +16,8 @@ import { Plus, Receipt, Eye } from 'lucide-react';
 
 export function SalesHistoryPage() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission(PERMISSIONS.SALES_CREATE);
   const [searchParams] = useSearchParams();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,12 +174,14 @@ export function SalesHistoryPage() {
         title="Sales Records & Receipts"
         description="Search past sales receipts, monitor credit collections, and inspect itemized breakdown."
         action={
-          <Button asChild className="shadow-xs">
-            <NavLink to={ROUTES.APP_SALES_NEW}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              New Sale
-            </NavLink>
-          </Button>
+          canCreate ? (
+            <Button asChild className="shadow-xs">
+              <NavLink to={ROUTES.APP_SALES_NEW}>
+                <Plus className="h-4 w-4 mr-1.5" />
+                New Sale
+              </NavLink>
+            </Button>
+          ) : undefined
         }
       />
 

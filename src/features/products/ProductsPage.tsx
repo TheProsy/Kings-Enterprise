@@ -10,12 +10,17 @@ import { Modal } from '@/components/ui/Modal';
 import { ProductForm } from '@/features/products/ProductForm';
 import { catalogueService, type CatalogueItem } from '@/services';
 import { toast } from '@/lib/toast';
-import { Plus } from 'lucide-react';
+import { Pencil, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { formatMoney } from '@/lib/formatters';
 import { StatusBadge } from '@/components/ui/Badge';
+import { useAuth } from '@/features/auth';
+import { PERMISSIONS } from '@/constants';
 
 export function ProductsPage() {
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission(PERMISSIONS.PRODUCTS_CREATE);
+  const canEdit = hasPermission(PERMISSIONS.PRODUCTS_EDIT);
   const [items, setItems] = useState<CatalogueItem[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get('q') ?? '';
@@ -24,6 +29,7 @@ export function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<CatalogueItem | null>(null);
+  const [editProductId, setEditProductId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -81,10 +87,12 @@ export function ProductsPage() {
         title="Products & Inventory"
         description="Search, monitor stock levels, and manage your building materials catalogue."
         action={
-          <Button onClick={() => setFormOpen(true)}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Add New Product
-          </Button>
+          canCreate ? (
+            <Button onClick={() => setFormOpen(true)}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Add New Product
+            </Button>
+          ) : undefined
         }
       />
 
@@ -133,7 +141,7 @@ export function ProductsPage() {
               price={item.sellingPrice}
               stock={item.quantityOnHand}
               unit={item.unit}
-              lowStock={item.quantityOnHand <= item.minimumStock}
+              lowStock={item.active && item.quantityOnHand <= item.minimumStock}
               category={item.categoryName}
               onPress={() => setSelectedProduct(item)}
             />
@@ -160,12 +168,12 @@ export function ProductsPage() {
                 >
                   Clear Filters
                 </Button>
-              ) : (
+              ) : canCreate ? (
                 <Button size="sm" onClick={() => setFormOpen(true)}>
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   Add First Product
                 </Button>
-              )
+              ) : undefined
             }
           />
         </div>
@@ -193,7 +201,19 @@ export function ProductsPage() {
           }
           size="md"
           footer={
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              {canEdit && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditProductId(selectedProduct.productId);
+                    setSelectedProduct(null);
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                  Edit Product
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={() => setSelectedProduct(null)}>
                 Close
               </Button>
@@ -260,6 +280,21 @@ export function ProductsPage() {
           </div>
         </Modal>
       )}
+      <Modal
+        open={Boolean(editProductId)}
+        onClose={() => setEditProductId(null)}
+        title="Edit Product"
+        description="Update the product details, pricing, stock levels and variations."
+        size="lg"
+      >
+        {editProductId && (
+          <ProductForm
+            productId={editProductId}
+            onClose={() => setEditProductId(null)}
+            onSuccess={loadData}
+          />
+        )}
+      </Modal>
     </div>
   );
 }

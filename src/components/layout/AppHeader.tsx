@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/features/auth';
-import { ROUTES } from '@/constants';
+import { PERMISSIONS, ROUTES } from '@/constants';
 import { useTheme } from '@/contexts/useTheme';
 import { cn } from '@/lib/utilities';
 import { BUSINESS } from '@/config/business';
@@ -41,7 +41,7 @@ const PAGE_TITLES: Array<[string, string]> = [
 ];
 
 export function AppHeader({ onMenuToggle }: AppHeaderProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
@@ -162,13 +162,15 @@ export function AppHeader({ onMenuToggle }: AppHeaderProps) {
             )}
           </button>
 
-          <NavLink
-            to={ROUTES.APP_SALES_NEW}
-            className="hidden h-10 items-center gap-1.5 rounded-lg bg-brand px-3.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-brand-hover sm:inline-flex"
-          >
-            <span>New Sale</span>
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </NavLink>
+          {hasPermission(PERMISSIONS.SALES_CREATE) ? (
+            <NavLink
+              to={ROUTES.APP_SALES_NEW}
+              className="hidden h-10 items-center gap-1.5 rounded-lg bg-brand px-3.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-brand-hover sm:inline-flex"
+            >
+              <span>New Sale</span>
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </NavLink>
+          ) : null}
 
           <button
             type="button"
@@ -224,15 +226,17 @@ export function AppHeader({ onMenuToggle }: AppHeaderProps) {
                 </div>
 
                 <div className="py-1">
-                  <NavLink
-                    to={ROUTES.APP_SETTINGS}
-                    role="menuitem"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary"
-                  >
-                    <User className="h-4 w-4" aria-hidden="true" />
-                    Account Settings
-                  </NavLink>
+                  {hasPermission(PERMISSIONS.SETTINGS_VIEW) ? (
+                    <NavLink
+                      to={ROUTES.APP_SETTINGS}
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary"
+                    >
+                      <User className="h-4 w-4" aria-hidden="true" />
+                      Account Settings
+                    </NavLink>
+                  ) : null}
                   <NavLink
                     to={ROUTES.HOME}
                     role="menuitem"

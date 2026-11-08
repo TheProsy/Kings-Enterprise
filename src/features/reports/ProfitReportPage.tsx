@@ -22,12 +22,27 @@ export function ProfitReportPage() {
       ]);
 
       const completedSales = sales.filter((sale) => sale.status === 'completed');
-      const totalSalesRevenue = completedSales.reduce((sum, s) => sum + (s.total || 0), 0);
+      const totalSalesRevenue = completedSales.reduce(
+        (sum, sale) =>
+          sum + Math.max(0, (sale.total || 0) - (sale.returnedTotalKobo || 0)),
+        0,
+      );
       const totalCOGS = completedSales.reduce(
         (sum, sale) =>
           sum +
           (sale.items || []).reduce(
-            (lineTotal: number, item: any) => lineTotal + ((item.costBasis || 0) * (item.quantity || 0)),
+            (lineTotal: number, item: any) => {
+              const returned = Number(
+                sale.returnedQuantities?.[
+                  `${item.productId}:${item.variantId}`
+                ] ?? 0,
+              );
+              const soldQuantity = Math.max(
+                0,
+                (item.quantity || 0) - returned,
+              );
+              return lineTotal + (item.costBasis || 0) * soldQuantity;
+            },
             0,
           ),
         0,

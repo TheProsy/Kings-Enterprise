@@ -6,7 +6,7 @@ import { PriceInput } from '@/components/ui/PriceInput';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable } from '@/components/tables/DataTable';
-import { customerService, saleService, checkoutService } from '@/services';
+import { customerService, saleService, checkoutService, receiptService } from '@/services';
 import { ROUTES, PERMISSIONS } from '@/constants';
 import { NavLink, useParams } from 'react-router-dom';
 import { formatMoney, formatDate, toKobo, generateId } from '@/lib/formatters';
@@ -60,22 +60,59 @@ export function CustomerDetailPage() {
 
     setSavingPayment(true);
     try {
-      const result = await checkoutService.recordPayment({
-        idempotencyKey: generateId(),
-        partyType: 'customer',
-        partyId: customer.id,
-        amount: amountKobo,
-        paymentMethod,
-        recordedBy: user?.uid || user?.id || 'unknown',
-      });
+      const outstandingSales = sales
+        .filter(
+          (sale) =>
+            sale.status === 'completed' && Number(sale.balanceDue || 0) > 0,
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.createdAt as any).getTime() -
+            new Date(b.createdAt as any).getTime(),
+        );
+
+      let remaining = amountKobo;
+      let receiptsIssued = 0;
+
+      for (const sale of outstandingSales) {
+        if (remaining <= 0) break;
+        const due = Math.max(0, Number(sale.balanceDue || 0));
+        if (due <= 0) continue;
+        const payment = Math.min(remaining, due);
+        await receiptService.recordPayment({
+          idempotencyKey: generateId(),
+          saleId: sale.id,
+          amount: payment,
+          paymentMethod,
+        });
+        remaining -= payment;
+        receiptsIssued += 1;
+      }
+
+      if (remaining > 0) {
+        await checkoutService.recordPayment({
+          idempotencyKey: generateId(),
+          partyType: 'customer',
+          partyId: customer.id,
+          amount: remaining,
+          paymentMethod,
+          recordedBy: user?.uid || user?.id || 'unknown',
+        });
+      }
+
       toast(
-        `Payment collected! Outstanding balance: ${formatMoney(result.balanceDue)}`,
+        `${formatMoney(amountKobo - remaining)} collected${
+          receiptsIssued > 0
+            ? ` across ${receiptsIssued} sale receipt${receiptsIssued === 1 ? '' : 's'}`
+            : ''
+        }.`,
         'success',
       );
       setPaymentAmount(0);
       await loadData();
     } catch (error) {
       console.error(error);
+      await loadData();
       toast('Could not record the payment. Please try again.', 'error');
     } finally {
       setSavingPayment(false);

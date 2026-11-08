@@ -7,11 +7,14 @@ import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/tables/DataTable';
 import { catalogueService, type CatalogueItem } from '@/services';
 import { formatMoney } from '@/lib/formatters';
-import { ROUTES } from '@/constants';
+import { PERMISSIONS, ROUTES } from '@/constants';
+import { useAuth } from '@/features/auth';
 import { Plus } from 'lucide-react';
 
 export function LowStockPage() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canReorder = hasPermission(PERMISSIONS.PURCHASES_CREATE);
   const [items, setItems] = useState<CatalogueItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +34,9 @@ export function LowStockPage() {
     };
   }, []);
 
-  const lowStock = items.filter((item) => item.quantityOnHand <= item.minimumStock);
+  const lowStock = items.filter(
+    (item) => item.active && item.quantityOnHand <= item.minimumStock,
+  );
 
   const columns = [
     {
@@ -90,16 +95,18 @@ export function LowStockPage() {
       headerClassName: 'text-right',
       className: 'text-right',
       render: () => (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(ROUTES.APP_PURCHASES_NEW);
-          }}
-        >
-          Reorder
-        </Button>
+        canReorder ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(ROUTES.APP_PURCHASES_NEW);
+            }}
+          >
+            Reorder
+          </Button>
+        ) : null
       ),
     },
   ];
@@ -110,13 +117,15 @@ export function LowStockPage() {
         title="Low Stock Alerts"
         description="Materials requiring replenishment to avoid stockouts."
         action={
-          <Button
-            onClick={() => navigate(ROUTES.APP_PURCHASES_NEW)}
-            className="shadow-xs"
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            Receive Stock
-          </Button>
+          canReorder ? (
+            <Button
+              onClick={() => navigate(ROUTES.APP_PURCHASES_NEW)}
+              className="shadow-xs"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Receive Stock
+            </Button>
+          ) : undefined
         }
       />
 
@@ -155,13 +164,15 @@ export function LowStockPage() {
 
             <div className="flex items-center justify-between pt-1">
               <span className="text-sm font-bold text-text-primary">{formatMoney(item.sellingPrice)}</span>
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={() => navigate(ROUTES.APP_PURCHASES_NEW)}
-              >
-                Reorder Stock
-              </Button>
+              {canReorder && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => navigate(ROUTES.APP_PURCHASES_NEW)}
+                >
+                  Reorder Stock
+                </Button>
+              )}
             </div>
           </div>
         )}

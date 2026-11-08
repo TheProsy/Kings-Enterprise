@@ -4,8 +4,13 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatsSkeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
-import { saleService, purchaseService, expenseService } from '@/services';
+import { saleService, purchaseService, expenseService, paymentService } from '@/services';
 import { formatMoney } from '@/lib/formatters';
+import {
+  amountPaidAtSale,
+  isActiveInflowPayment,
+  saleLinkedPaymentTotals,
+} from '@/lib/payments';
 import { ROUTES } from '@/constants';
 import { NavLink } from 'react-router-dom';
 import { TrendingUp, DollarSign, Package, CreditCard, Users, ChevronRight, BarChart3, Download } from 'lucide-react';
@@ -16,24 +21,45 @@ export function ReportsPage() {
 
   const loadStats = useCallback(async () => {
     try {
-      const [sales, purchs, exps] = await Promise.all([
+      const [sales, purchs, exps, payments] = await Promise.all([
         saleService.list(),
         purchaseService.list(),
         expenseService.list(),
+        paymentService.list(),
       ]);
 
       const completedSales = sales.filter((sale) => sale.status === 'completed');
-      const totalSales = completedSales.reduce((sum, s) => sum + s.total, 0);
-      const totalReceived = completedSales.reduce((sum, s) => sum + s.amountPaid, 0);
-      const totalPurchases = purchs.reduce((sum, p) => sum + p.total, 0);
+      const totalSales = completedSales.reduce(
+        (sum, sale) =>
+          sum + Math.max(0, (sale.total || 0) - (sale.returnedTotalKobo || 0)),
+        0,
+      );
+      const linkedPaymentTotals = saleLinkedPaymentTotals(payments);
+      const salesById = new Map(sales.map((sale) => [sale.id, sale]));
+      const totalReceived =
+        completedSales.reduce(
+          (sum, sale) => sum + amountPaidAtSale(sale, linkedPaymentTotals),
+          0,
+        ) +
+        payments
+          .filter((payment) => isActiveInflowPayment(payment, salesById))
+          .reduce((sum, payment) => sum + payment.amount, 0);
+      const totalPurchases = purchs
+        .filter((purchase) => purchase.status !== 'cancelled')
+        .reduce((sum, p) => sum + p.total, 0);
       const totalExpenses = exps.reduce((sum, e) => sum + e.amount, 0);
       const cogs = completedSales.reduce(
         (sum, sale) =>
           sum +
-          sale.items.reduce(
-            (lineTotal, item) => lineTotal + item.costBasis * item.quantity,
-            0,
-          ),
+          (sale.items || []).reduce((lineTotal, item) => {
+            const returned = Number(
+              sale.returnedQuantities?.[
+                `${item.productId}:${item.variantId}`
+              ] ?? 0,
+            );
+            const soldQuantity = Math.max(0, item.quantity - returned);
+            return lineTotal + item.costBasis * soldQuantity;
+          }, 0),
         0,
       );
 

@@ -10,6 +10,7 @@ import { authService } from '@/services';
 import { PERMISSIONS, ROLE_PERMISSIONS, ROLES, ROUTES } from '@/constants';
 import { toast } from '@/lib/toast';
 import { getAuthErrorMessage } from '@/features/auth/authErrors';
+import { useAuth } from '@/features/auth';
 import type { User } from '@/types';
 import { Plus, Shield, KeyRound, UserX } from 'lucide-react';
 
@@ -29,6 +30,8 @@ const ALL_PERMISSIONS = Object.values(PERMISSIONS);
 
 export function EmployeesPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isOwner = user?.role === ROLES.OWNER;
   const [employees, setEmployees] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -167,7 +170,7 @@ export function EmployeesPage() {
       className: 'text-right',
       render: (employee: User) => (
         <div className="flex items-center justify-end gap-2">
-          {employee.role !== 'owner' && (
+          {isOwner && employee.role !== 'owner' && (
             <>
               <Button
                 size="sm"
@@ -205,10 +208,12 @@ export function EmployeesPage() {
         title="Staff & Access Control"
         description="Manage cashier logins, role assignments, and feature permissions."
         action={
-          <Button onClick={() => setShowForm(true)} className="shadow-xs">
-            <Plus className="h-4 w-4 mr-1.5" />
-            Add Staff Member
-          </Button>
+          isOwner ? (
+            <Button onClick={() => setShowForm(true)} className="shadow-xs">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add Staff Member
+            </Button>
+          ) : undefined
         }
       />
 
@@ -234,7 +239,7 @@ export function EmployeesPage() {
               <Badge variant={employee.role === 'owner' ? 'info' : 'neutral'}>
                 {ROLE_LABELS[employee.role] || employee.role}
               </Badge>
-              {employee.role !== 'owner' && (
+              {isOwner && employee.role !== 'owner' && (
                 <div className="flex items-center gap-1.5">
                   <Button
                     size="sm"

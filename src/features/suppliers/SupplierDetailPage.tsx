@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
@@ -6,13 +6,14 @@ import { PriceInput } from '@/components/ui/PriceInput';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable } from '@/components/tables/DataTable';
-import { supplierService, purchaseService, checkoutService } from '@/services';
+import { supplierService, purchaseService, checkoutService, paymentService } from '@/services';
 import { ROUTES, PERMISSIONS } from '@/constants';
 import { NavLink, useParams } from 'react-router-dom';
 import { formatMoney, formatDate, toKobo, generateId } from '@/lib/formatters';
+import { purchaseBalancesAfterPayments } from '@/lib/payments';
 import { toast } from '@/lib/toast';
 import { useAuth } from '@/features/auth';
-import type { Purchase, Supplier } from '@/types';
+import type { Payment, Purchase, Supplier } from '@/types';
 import { Plus, Check } from 'lucide-react';
 
 export function SupplierDetailPage() {
@@ -21,6 +22,7 @@ export function SupplierDetailPage() {
   const canRecordPayment = hasPermission(PERMISSIONS.FINANCE_RECORD_PAYMENT);
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [supplierPayments, setSupplierPayments] = useState<Payment[]>([]);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'pos'>('transfer');
   const [savingPayment, setSavingPayment] = useState(false);
@@ -28,12 +30,16 @@ export function SupplierDetailPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [suppliers, purchaseList] = await Promise.all([
+      const [suppliers, purchaseList, paymentList] = await Promise.all([
         supplierService.list(),
         purchaseService.list(),
+        paymentService.list(),
       ]);
       setSupplier(suppliers.find((entry) => entry.id === supplierId) ?? null);
       setPurchases(purchaseList.filter((purchase) => purchase.supplierId === supplierId));
+      setSupplierPayments(
+        paymentList.filter((payment) => payment.direction === 'out'),
+      );
     } catch (error) {
       console.error(error);
       toast('Could not load supplier details.', 'error');
@@ -45,6 +51,11 @@ export function SupplierDetailPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const purchaseBalances = useMemo(
+    () => purchaseBalancesAfterPayments(purchases, supplierPayments),
+    [purchases, supplierPayments],
+  );
 
   const recordPayment = async () => {
     if (!supplier) return;
@@ -141,15 +152,18 @@ export function SupplierDetailPage() {
       header: 'Debt Remaining',
       headerClassName: 'text-right',
       className: 'text-right',
-      render: (p: Purchase) => (
-        <span
-          className={`text-xs font-bold ${
-            p.balanceDue > 0 ? 'text-danger-fg' : 'text-success-fg'
-          }`}
-        >
-          {p.balanceDue > 0 ? formatMoney(p.balanceDue) : 'Settled'}
-        </span>
-      ),
+      render: (p: Purchase) => {
+        const balance = purchaseBalances.get(p.id) ?? p.balanceDue;
+        return (
+          <span
+            className={`text-xs font-bold ${
+              balance > 0 ? 'text-danger-fg' : 'text-success-fg'
+            }`}
+          >
+            {balance > 0 ? formatMoney(balance) : 'Settled'}
+          </span>
+        );
+      },
     },
   ];
 

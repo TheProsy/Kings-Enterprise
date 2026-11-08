@@ -7,7 +7,8 @@ import { Modal } from '@/components/ui/Modal';
 import { DataTable } from '@/components/tables/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { BUSINESS_ID, supplierService } from '@/services';
-import { ROUTES, buildRoute } from '@/constants';
+import { PERMISSIONS, ROUTES, buildRoute } from '@/constants';
+import { useAuth } from '@/features/auth';
 import { useNavigate } from 'react-router-dom';
 import { formatMoney } from '@/lib/formatters';
 import { toast } from '@/lib/toast';
@@ -16,6 +17,8 @@ import { Plus, Building2, Phone, ChevronRight } from 'lucide-react';
 
 export function SuppliersPage() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission(PERMISSIONS.SUPPLIERS_CREATE);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -146,10 +149,12 @@ export function SuppliersPage() {
         title="Suppliers Directory"
         description="Manage building material distributors, factories, and trade accounts."
         action={
-          <Button onClick={() => setShowForm(true)} className="shadow-xs">
-            <Plus className="h-4 w-4 mr-1.5" />
-            Add Supplier
-          </Button>
+          canCreate ? (
+            <Button onClick={() => setShowForm(true)} className="shadow-xs">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add Supplier
+            </Button>
+          ) : undefined
         }
       />
 

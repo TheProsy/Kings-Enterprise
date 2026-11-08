@@ -9,7 +9,8 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable } from '@/components/tables/DataTable';
 import { StatCard } from '@/components/ui/StatCard';
 import { expenseService } from '@/services';
-import { EXPENSE_CATEGORIES, ROUTES } from '@/constants';
+import { EXPENSE_CATEGORIES, PERMISSIONS, ROUTES } from '@/constants';
+import { useAuth } from '@/features/auth';
 import { formatMoney, formatDate } from '@/lib/formatters';
 import { toast } from '@/lib/toast';
 import type { Expense } from '@/types';
@@ -17,6 +18,8 @@ import { Plus, CreditCard, Receipt, Tag } from 'lucide-react';
 
 export function ExpensesPage() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission(PERMISSIONS.EXPENSES_CREATE);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -103,13 +106,15 @@ export function ExpensesPage() {
         title="Store Expenses"
         description="Track overhead, driver logistics, electricity, wages, and operating costs."
         action={
-          <Button
-            onClick={() => navigate(ROUTES.APP_EXPENSES_NEW)}
-            className="shadow-xs"
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            Record Expense
-          </Button>
+          canCreate ? (
+            <Button
+              onClick={() => navigate(ROUTES.APP_EXPENSES_NEW)}
+              className="shadow-xs"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Record Expense
+            </Button>
+          ) : undefined
         }
       />
 

@@ -10,9 +10,11 @@ interface MobileBottomNavigationProps {
 export function MobileBottomNavigation({ onOpenSidebar }: MobileBottomNavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
 
-  const primary = NAV_ITEMS.flatMap((section) => section.items);
+  const primary = NAV_ITEMS.flatMap((section) => section.items).filter(
+    (item) => !item.permission || hasPermission(item.permission),
+  );
 
   const dashboardItem = primary.find((item) => item.path === '/app/dashboard');
   const productsItem = primary.find((item) => item.path === '/app/products');

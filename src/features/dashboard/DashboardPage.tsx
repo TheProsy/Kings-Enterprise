@@ -22,6 +22,11 @@ import { formatMoney, formatDate } from '@/lib/formatters';
 import { useAuth } from '@/features/auth';
 import { ROUTES, PERMISSIONS, buildRoute } from '@/constants';
 import { catalogueService, paymentService, saleService } from '@/services';
+import {
+  amountPaidAtSale,
+  isActiveInflowPayment,
+  saleLinkedPaymentTotals,
+} from '@/lib/payments';
 import { toast } from '@/lib/toast';
 import type { CatalogueItem } from '@/services';
 import type { Sale } from '@/types';
@@ -72,15 +77,26 @@ export function DashboardPage() {
       );
 
       const revenue = todaysSales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
+      const linkedPaymentTotals = saleLinkedPaymentTotals(payments);
+      const salesById = new Map(sales.map((sale) => [sale.id, sale]));
       const received =
-        todaysSales.reduce((sum, sale) => sum + Number(sale.amountPaid || 0), 0) +
-        todaysPayments.reduce((sum, payment) => sum + payment.amount, 0);
+        todaysSales.reduce(
+          (sum, sale) => sum + amountPaidAtSale(sale, linkedPaymentTotals),
+          0,
+        ) +
+        todaysPayments
+          .filter((payment) => isActiveInflowPayment(payment, salesById))
+          .reduce((sum, payment) => sum + payment.amount, 0);
 
       setTodaySales(todaysSales.length);
       setTodayRevenue(revenue);
       setMoneyReceived(received);
       setTotalProducts(new Set(catalogue.items.map((item) => item.productId)).size);
-      setLowStock(catalogue.items.filter((item) => item.quantityOnHand <= item.minimumStock));
+      setLowStock(
+        catalogue.items.filter(
+          (item) => item.active && item.quantityOnHand <= item.minimumStock,
+        ),
+      );
       setRecentSales(sales.slice(0, 6));
 
       const days: DailyPoint[] = [];
@@ -263,7 +279,21 @@ export function DashboardPage() {
                   <li key={sale.id}>
                     <button
                       type="button"
-                      onClick={() => navigate(buildRoute(ROUTES.APP_SALE_DETAIL, { saleId: sale.id }))}
+                      onClick={() => {
+                        if (sale.receiptId) {
+                          navigate(
+                            buildRoute(ROUTES.APP_RECEIPT_DETAIL, {
+                              receiptId: sale.receiptId,
+                            }),
+                          );
+                        } else {
+                          navigate(
+                            `${ROUTES.APP_SALES}?search=${encodeURIComponent(
+                              sale.receiptNumber || '',
+                            )}`,
+                          );
+                        }
+                      }}
                       className="group flex w-full items-center justify-between gap-3 px-2 py-3 text-left transition-colors hover:bg-surface-2"
                     >
                       <span className="flex min-w-0 items-center gap-3">

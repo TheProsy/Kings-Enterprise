@@ -18,7 +18,9 @@ export function MoneySpentPage() {
     Promise.all([purchaseService.list(), expenseService.list(), paymentService.list()])
       .then(([purchaseList, expenseList, paymentList]) => {
         if (!active) return;
-        setPurchases(purchaseList);
+        setPurchases(
+          purchaseList.filter((purchase) => purchase.status !== 'cancelled'),
+        );
         setExpenses(expenseList);
         setSupplierPayments(paymentList.filter((payment) => payment.direction === 'out'));
       })

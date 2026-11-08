@@ -1,10 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { paymentService, saleService } from '@/services';
 import { formatMoney, formatDate } from '@/lib/formatters';
+import {
+  amountPaidAtSale,
+  isActiveInflowPayment,
+  saleLinkedPaymentTotals,
+} from '@/lib/payments';
 import { toast } from '@/lib/toast';
 import type { Payment, Sale } from '@/types';
 
@@ -18,8 +23,13 @@ export function MoneyReceivedPage() {
     Promise.all([saleService.list(), paymentService.list()])
       .then(([salesList, paymentList]) => {
         if (!active) return;
-        setSales(salesList.filter((sale) => sale.amountPaid > 0));
-        setPayments(paymentList.filter((payment) => payment.direction === 'in'));
+        const salesById = new Map(salesList.map((sale) => [sale.id, sale]));
+        setSales(salesList.filter((sale) => sale.status === 'completed'));
+        setPayments(
+          paymentList.filter((payment) =>
+            isActiveInflowPayment(payment, salesById),
+          ),
+        );
       })
       .catch((error) => {
         console.error(error);
@@ -33,10 +43,19 @@ export function MoneyReceivedPage() {
     };
   }, []);
 
-  const salesReceived = sales.reduce((sum, sale) => sum + sale.amountPaid, 0);
+  const linkedPaymentTotals = useMemo(
+    () => saleLinkedPaymentTotals(payments),
+    [payments],
+  );
+  const salesReceived = sales.reduce(
+    (sum, sale) => sum + amountPaidAtSale(sale, linkedPaymentTotals),
+    0,
+  );
   const debtReceived = payments.reduce((sum, payment) => sum + payment.amount, 0);
   const total = salesReceived + debtReceived;
-  const transactionCount = sales.length + payments.length;
+  const transactionCount =
+    sales.filter((sale) => amountPaidAtSale(sale, linkedPaymentTotals) > 0).length +
+    payments.length;
 
   return (
     <div className="space-y-6">
@@ -79,7 +98,7 @@ export function MoneyReceivedPage() {
                     <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Receipt</th>
                     <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Customer</th>
                     <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase text-right">Total</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase text-right">Paid</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase text-right">Paid at Sale</th>
                     <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Method</th>
                     <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Status</th>
                   </tr>
@@ -93,7 +112,7 @@ export function MoneyReceivedPage() {
                         {sale.customerName || (sale.customerId ? 'Customer' : 'Walk-in')}
                       </td>
                       <td className="px-4 py-3 text-sm text-text-primary">{formatMoney(sale.total)}</td>
-                      <td className="px-4 py-3 text-sm text-text-primary">{formatMoney(sale.amountPaid)}</td>
+                      <td className="px-4 py-3 text-sm text-text-primary">{formatMoney(amountPaidAtSale(sale, linkedPaymentTotals))}</td>
                       <td className="px-4 py-3 text-sm text-text-secondary capitalize">{sale.paymentMethod}</td>
                       <td className="px-4 py-3 text-sm">
                         <Badge

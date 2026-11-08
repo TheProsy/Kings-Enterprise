@@ -8,7 +8,8 @@ import { Modal } from '@/components/ui/Modal';
 import { DataTable } from '@/components/tables/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { BUSINESS_ID, customerService } from '@/services';
-import { ROUTES, buildRoute } from '@/constants';
+import { PERMISSIONS, ROUTES, buildRoute } from '@/constants';
+import { useAuth } from '@/features/auth';
 import { formatMoney } from '@/lib/formatters';
 import { toast } from '@/lib/toast';
 import type { Customer } from '@/types';
@@ -16,6 +17,8 @@ import { Plus, User, Phone, ChevronRight, AlertCircle } from 'lucide-react';
 
 export function CustomersPage() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission(PERMISSIONS.CUSTOMERS_CREATE);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -164,10 +167,12 @@ export function CustomersPage() {
               <AlertCircle className="h-3.5 w-3.5 mr-1 text-warning-fg" />
               Debtors List
             </Button>
-            <Button onClick={() => setShowForm(true)} className="shadow-xs">
-              <Plus className="h-4 w-4 mr-1.5" />
-              Add Customer
-            </Button>
+            {canCreate && (
+              <Button onClick={() => setShowForm(true)} className="shadow-xs">
+                <Plus className="h-4 w-4 mr-1.5" />
+                Add Customer
+              </Button>
+            )}
           </div>
         }
       />

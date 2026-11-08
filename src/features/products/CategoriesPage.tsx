@@ -7,11 +7,16 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Modal } from '@/components/ui/Modal';
 import { DataTable } from '@/components/tables/DataTable';
 import { BUSINESS_ID, categoryService } from '@/services';
+import { PERMISSIONS } from '@/constants';
+import { useAuth } from '@/features/auth';
 import { toast } from '@/lib/toast';
 import type { Category } from '@/types';
 import { Plus, Tag, Edit, Trash2 } from 'lucide-react';
 
 export function CategoriesPage() {
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission(PERMISSIONS.PRODUCTS_CREATE);
+  const canEdit = hasPermission(PERMISSIONS.PRODUCTS_EDIT);
   const [categories, setCategories] = useState<Category[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
@@ -133,14 +138,18 @@ export function CategoriesPage() {
       className: 'text-right',
       render: (cat: Category) => (
         <div className="flex items-center justify-end gap-2">
-          <Button size="sm" variant="outline" onClick={() => openEdit(cat)}>
-            <Edit className="h-3 w-3 mr-1" />
-            Edit
-          </Button>
-          {cat.active && (
-            <Button size="sm" variant="ghost" onClick={() => deactivate(cat)}>
-              <Trash2 className="h-3 w-3 text-danger-fg" />
-            </Button>
+          {canEdit && (
+            <>
+              <Button size="sm" variant="outline" onClick={() => openEdit(cat)}>
+                <Edit className="h-3 w-3 mr-1" />
+                Edit
+              </Button>
+              {cat.active && (
+                <Button size="sm" variant="ghost" onClick={() => deactivate(cat)}>
+                  <Trash2 className="h-3 w-3 text-danger-fg" />
+                </Button>
+              )}
+            </>
           )}
         </div>
       ),
@@ -153,10 +162,12 @@ export function CategoriesPage() {
         title="Product Categories"
         description="Organise building materials into logical inventory groupings."
         action={
-          <Button onClick={openCreate} className="shadow-xs">
-            <Plus className="h-4 w-4 mr-1.5" />
-            Add Category
-          </Button>
+          canCreate ? (
+            <Button onClick={openCreate} className="shadow-xs">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add Category
+            </Button>
+          ) : undefined
         }
       />
 
@@ -180,13 +191,17 @@ export function CategoriesPage() {
               )}
             </div>
             <div className="flex items-center gap-1.5">
-              <Button size="sm" variant="outline" onClick={() => openEdit(cat)}>
-                Edit
-              </Button>
-              {cat.active && (
-                <Button size="sm" variant="ghost" onClick={() => deactivate(cat)}>
-                  <Trash2 className="h-3.5 w-3.5 text-danger-fg" />
-                </Button>
+              {canEdit && (
+                <>
+                  <Button size="sm" variant="outline" onClick={() => openEdit(cat)}>
+                    Edit
+                  </Button>
+                  {cat.active && (
+                    <Button size="sm" variant="ghost" onClick={() => deactivate(cat)}>
+                      <Trash2 className="h-3.5 w-3.5 text-danger-fg" />
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>
