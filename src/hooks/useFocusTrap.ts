@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -14,6 +14,12 @@ export function useFocusTrap(
   active: boolean,
   onClose?: () => void,
 ) {
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!active) return;
 
@@ -31,9 +37,9 @@ export function useFocusTrap(
     const timer = window.setTimeout(focusFirst, 0);
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && onClose) {
+      if (event.key === 'Escape' && onCloseRef.current) {
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -68,7 +74,7 @@ export function useFocusTrap(
       document.removeEventListener('keydown', handleKeyDown, true);
       previouslyFocused?.focus?.({ preventScroll: true });
     };
-  }, [active, containerRef, onClose]);
+  }, [active, containerRef]);
 }
 
 export function useScrollLock(active: boolean) {
