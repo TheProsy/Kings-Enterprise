@@ -88,7 +88,7 @@ The top navigation features a live **Employee Role Switcher** to test and verify
 - **Frontend:** React 19, TypeScript, Vite 8, Tailwind CSS v4, Lucide React
 - **Backend & Database:** Firebase Authentication, Cloud Firestore (Spark plan; no Cloud Functions or Storage required)
 - **Security:** `firestore.rules`, role-based field verification
-- **Deployment:** Firebase Hosting (`firebase deploy --only hosting,firestore:rules`)
+- **Deployment:** Vercel for the web frontend; Firebase for Auth, Firestore and rules. Firebase Hosting remains configured as a secondary target.
 
 ---
 
@@ -106,3 +106,53 @@ Build for production:
 ```bash
 npm run build
 ```
+
+---
+
+## ☁️ Deploying the Frontend to Vercel
+
+Vercel hosts the static React frontend only. Firebase Authentication and Cloud Firestore remain the backend. The Cloud Functions in `functions/` are not deployed to Vercel, and the web client does not call them.
+
+### 1. Import the repository
+
+1. Push this repository to GitHub.
+2. In Vercel, choose **Add New → Project** and import the repository.
+3. Use these settings:
+   - **Framework preset:** Vite
+   - **Root directory:** `./`
+   - **Build command:** `npm run build`
+   - **Output directory:** `dist`
+   - **Install command:** `npm install`
+4. Deploy.
+
+Node.js 22 is pinned through the `engines` field in `package.json`. `vercel.json` configures the SPA rewrite, so deep links such as `/products/dangote-cement` and `/app/dashboard` load correctly.
+
+### 2. Add environment variables
+
+Add every variable from `.env.example` under **Vercel → Project → Settings → Environment Variables**, for both Production and Preview. `.env` is gitignored and is not uploaded to Vercel.
+
+| Variable | Value |
+| --- | --- |
+| `VITE_FIREBASE_API_KEY` | Firebase web API key |
+| `VITE_FIREBASE_AUTH_DOMAIN` | `blessed-kings-enterprises.firebaseapp.com` |
+| `VITE_FIREBASE_PROJECT_ID` | `blessed-kings-enterprises` |
+| `VITE_FIREBASE_STORAGE_BUCKET` | `blessed-kings-enterprises.firebasestorage.app` |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase sender ID from the console |
+| `VITE_FIREBASE_APP_ID` | Firebase web app ID |
+| `VITE_FIREBASE_MEASUREMENT_ID` | Analytics measurement ID (optional) |
+
+`VITE_USE_FIREBASE_EMULATOR` must be unset or `false` on Vercel. All `VITE_*` values are compiled into the browser bundle at build time; the Firebase web API key is a public identifier and access control is enforced by `firestore.rules`.
+
+### 3. Allow the Vercel domain in Firebase
+
+In the Firebase Console, open **Authentication → Settings → Authorized domains** and add the production Vercel domain (for example `kings-enterprise.vercel.app`), plus any custom domain added later. If the Google Cloud API key has HTTP referrer restrictions, add the Vercel domains there as well.
+
+### 4. Deploy Firebase rules separately
+
+Vercel does not deploy Firebase configuration. Whenever `firestore.rules` changes, run:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+The existing GitHub Actions workflows continue to deploy `main` to Firebase Hosting as a secondary target.
