@@ -280,9 +280,11 @@ export function ProductsPage() {
       .filter((price) => Number.isFinite(price) && price > 0);
     const minimumPrice =
       prices.length > 0 ? Math.min(...prices) : product.price;
-    const description = `Buy ${product.name}${product.brand ? ` by ${product.brand}` : ''} in Lokoja from ${formatMoney(
-      minimumPrice,
-    )} per ${product.unit}. Check live stock at ${SITE_NAME} and order by phone or WhatsApp.`;
+    const priceCopy =
+      minimumPrice > 0
+        ? `from ${formatMoney(minimumPrice)} per ${product.unit}`
+        : 'with current prices available on request';
+    const description = `Buy ${product.name}${product.brand ? ` by ${product.brand}` : ''} in Lokoja ${priceCopy}. Check live stock at ${SITE_NAME} and order by phone or WhatsApp.`;
     const imagePath = product.imageUrl || '/images/og/kings-building-materials.jpg';
     const inStock = variants.some(
       (variant) =>
@@ -547,10 +549,16 @@ export function ProductsPage() {
                         <span className="block text-2xs font-semibold uppercase tracking-wide text-text-muted">
                           Depot Rate
                         </span>
-                        <span className="text-lg font-extrabold tabular-nums text-text-primary">
-                          {formatMoney(product.price)}
-                        </span>
-                        <span className="ml-1 text-xs text-text-secondary">/ {product.unit}</span>
+                        {product.price > 0 ? (
+                          <>
+                            <span className="text-lg font-extrabold tabular-nums text-text-primary">
+                              {formatMoney(product.price)}
+                            </span>
+                            <span className="ml-1 text-xs text-text-secondary">/ {product.unit}</span>
+                          </>
+                        ) : (
+                          <span className="text-base font-bold text-brand">Price on request</span>
+                        )}
                       </div>
 
                       <Button variant="secondary" size="sm" asChild className="shrink-0">

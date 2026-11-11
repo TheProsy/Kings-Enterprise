@@ -302,7 +302,7 @@ export function HomePage() {
 
                   <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
                     <span className="text-lg font-extrabold tabular-nums text-text-primary">
-                      {formatMoney(product.price)}
+                      {product.price > 0 ? formatMoney(product.price) : 'Price on request'}
                     </span>
                     <Button variant="outline" size="sm" asChild>
                       <NavLink to={`${ROUTES.REQUEST_QUOTE}?product=${encodeURIComponent(product.name)}`}>

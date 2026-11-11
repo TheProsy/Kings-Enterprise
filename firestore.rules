@@ -132,6 +132,12 @@ service cloud.firestore {
     // ------------------------------------------------------------------
     // Public catalogue (products + variants)
     // ------------------------------------------------------------------
+    // Collection-group reads let the public catalogue load every active
+    // variant in one query instead of one query per product.
+    match /{path=**}/variants/{variantId} {
+      allow read: if true;
+    }
+
     match /businesses/{businessId}/products/{productId} {
       allow read: if true;
       allow create: if isOwner(businessId) || hasPermission(businessId, 'products:create');

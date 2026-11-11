@@ -6,6 +6,7 @@ import {
   query,
   where,
   getDocs,
+  collectionGroup,
   updateDoc,
   serverTimestamp,
   orderBy,
@@ -732,29 +733,42 @@ export interface CatalogueItem extends ProductVariant {
 
 export const catalogueService = {
   async list() {
-    const [products, categories] = await Promise.all([
+    const [products, categories, variantsSnapshot] = await Promise.all([
       productService.list(),
       categoryService.list(),
+      getDocs(collectionGroup(db, 'variants')),
     ]);
     const categoryNames = new Map(categories.map((c) => [c.id, c.name]));
+    const productsById = new Map(products.map((product) => [product.id, product]));
 
-    const variantsByProduct = await Promise.all(
-      products.map(async (product) => {
-        const variants = await variantService.list(product.id);
-        return variants.map((variant) => ({
+    const variants = variantsSnapshot.docs
+      .map((entry) => ({ id: entry.id, ...entry.data() } as ProductVariant))
+      .filter(
+        (variant) =>
+          variant.businessId === BUSINESS_ID && variant.active === true,
+      );
+
+    const items = variants.flatMap((variant) => {
+      const product = productsById.get(variant.productId);
+      if (!product) return [];
+
+      return [
+        {
           ...variant,
           productName: product.name,
           categoryId: product.categoryId,
-          categoryName: product.categoryId ? categoryNames.get(product.categoryId) : undefined,
+          categoryName: product.categoryId
+            ? categoryNames.get(product.categoryId)
+            : undefined,
           imageUrl: product.imageUrl,
-        } as CatalogueItem));
-      }),
-    );
+        } as CatalogueItem,
+      ];
+    });
 
     return {
       products,
       categories,
-      items: variantsByProduct.flat(),
+      items,
     };
   },
 };
