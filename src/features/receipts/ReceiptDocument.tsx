@@ -74,7 +74,7 @@ export function ReceiptDocument({
               <p className="mt-0.5 text-[11px] text-slate-500">{business.tagline}</p>
             ) : null}
             <p className="mt-1.5 text-[10.5px] leading-relaxed text-slate-500">
-              {[business.address, business.phone ? `Tel: ${business.phone}` : '', business.email]
+              {[business.address, business.phone ? `Tel: ${business.phone}` : '']
                 .filter(Boolean)
                 .join(' · ')}
             </p>

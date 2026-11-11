@@ -22,7 +22,6 @@ interface GeneralSettings {
   name: string;
   phone: string;
   address: string;
-  email: string;
   logoUrl: string;
 }
 
@@ -43,7 +42,6 @@ const DEFAULT_GENERAL: GeneralSettings = {
   name: BUSINESS.name,
   phone: BUSINESS.phone,
   address: BUSINESS.address,
-  email: BUSINESS.email,
   logoUrl: '',
 };
 
@@ -218,12 +216,6 @@ export function SettingsPage() {
                   value={general.phone}
                   onChange={(e) => setGeneral({ ...general, phone: e.target.value })}
                 />
-                <Input
-                  label="Store Email"
-                  type="email"
-                  value={general.email}
-                  onChange={(e) => setGeneral({ ...general, email: e.target.value })}
-                />
                 <Textarea
                   label="Physical Depot Address"
                   value={general.address}
@@ -285,12 +277,6 @@ export function SettingsPage() {
                   rows={2}
                 />
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Input
-                    label="Email"
-                    type="email"
-                    value={receipt.email || ''}
-                    onChange={(e) => setReceipt({ ...receipt, email: e.target.value })}
-                  />
                   <Input
                     label="WhatsApp Number"
                     value={receipt.whatsapp || ''}
