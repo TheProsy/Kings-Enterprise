@@ -295,7 +295,7 @@ export function SettingsPage() {
                     label="WhatsApp Number"
                     value={receipt.whatsapp || ''}
                     onChange={(e) => setReceipt({ ...receipt, whatsapp: e.target.value })}
-                    placeholder="+234 800 000 0000"
+                    placeholder="+234 901 852 7535"
                   />
                   <Input
                     label="Website"

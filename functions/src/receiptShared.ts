@@ -66,8 +66,8 @@ export interface BusinessSnapshot {
 export const DEFAULT_RECEIPT_SETTINGS: ReceiptSettings = {
   businessName: 'Kings Building Materials',
   address: 'Lokoja, Kogi State, Nigeria',
-  phone: '+234 800 000 0000',
-  email: 'info@kingsbuildingmaterials.com',
+  phone: '+234 901 852 7535',
+  website: 'https://www.blessedkingsenterprises.com.ng',
   tagline: 'Quality Building Materials',
   primaryColor: '#172b4d',
   showLogo: true,
