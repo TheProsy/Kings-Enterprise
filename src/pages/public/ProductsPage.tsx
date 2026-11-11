@@ -14,18 +14,28 @@ import { Package, FileText, ChevronRight } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { getProductImage } from '@/constants/images';
 import { SITE_NAME, SITE_URL } from '@/config/site';
-import { applyNoIndex, applySeo, removeJsonLd, setJsonLd } from '@/lib/seo';
+import { applyNoIndex, applySeo, removeJsonLd, setJsonLd, setFaqSchema } from '@/lib/seo';
+import {
+  getCategoryContent,
+  getProductDescription,
+  getSpecEntries,
+} from '@/lib/catalogue-content';
+import { BUSINESS } from '@/config/business';
+import { FaqList } from '@/components/content/ContentBlocks';
 
 interface DisplayProduct {
   key: string;
   productId?: string;
   name: string;
+  description?: string;
+  categoryId?: string;
   category: string;
   price: number;
   unit: string;
   brand?: string;
   imageUrl?: string;
   quantityOnHand?: number;
+  attributes?: Record<string, string>;
 }
 
 const FALLBACK_PRODUCTS: DisplayProduct[] = [
@@ -175,6 +185,234 @@ const FALLBACK_PRODUCTS: DisplayProduct[] = [
   },
 ];
 
+interface ProductDetailViewProps {
+  variants: DisplayProduct[];
+}
+
+function ProductDetailView({ variants }: ProductDetailViewProps) {
+  const product = variants[0];
+  const categoryContent = getCategoryContent(product.categoryId, product.category);
+  const description = getProductDescription({
+    name: product.name,
+    description: product.description,
+    categoryId: product.categoryId,
+    categoryName: product.category,
+    unit: product.unit,
+    brand: product.brand,
+  });
+  const prices = variants
+    .map((variant) => variant.price)
+    .filter((price) => Number.isFinite(price) && price > 0);
+  const minimumPrice = prices.length > 0 ? Math.min(...prices) : 0;
+  const maximumPrice = prices.length > 0 ? Math.max(...prices) : 0;
+  const quantities = variants
+    .map((variant) => variant.quantityOnHand)
+    .filter((quantity): quantity is number => quantity !== undefined);
+  const stock =
+    quantities.length === 0
+      ? 'Ask for availability'
+      : quantities.some((quantity) => quantity > 0)
+        ? 'In stock'
+        : 'Out of stock';
+
+  const specMap = new Map<string, Set<string>>();
+  for (const variant of variants) {
+    for (const entry of getSpecEntries(variant.attributes)) {
+      const values = specMap.get(entry.label) ?? new Set<string>();
+      values.add(entry.value);
+      specMap.set(entry.label, values);
+    }
+  }
+  const specs = Array.from(specMap.entries()).map(([label, values]) => ({
+    label,
+    value: Array.from(values).join(', '),
+  }));
+
+  const whatsappHref = `${BUSINESS.whatsapp}?text=${encodeURIComponent(
+    `Hello ${BUSINESS.name}, I would like to confirm the price and availability of ${product.name}.`,
+  )}`;
+
+  return (
+    <div>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-10">
+        <div className="lg:col-span-5">
+          <div className="overflow-hidden rounded-xl border border-border bg-surface">
+            <ProductImage
+              src={product.imageUrl}
+              alt={`${product.name} at ${SITE_NAME} Lokoja`}
+              className="aspect-[4/3] w-full rounded-none"
+            />
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Badge variant={stock === 'In stock' ? 'success' : 'default'} size="sm">
+              {stock}
+            </Badge>
+            <Badge variant="default" size="sm">
+              {product.category}
+            </Badge>
+            {product.brand && <Badge variant="default" size="sm">{product.brand}</Badge>}
+          </div>
+        </div>
+
+        <div className="space-y-6 lg:col-span-7">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-text-primary sm:text-2xl">
+              Product details
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-text-secondary sm:text-base">
+              {description}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-border bg-surface-2 p-5">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <span className="block text-2xs font-semibold uppercase tracking-wide text-text-muted">
+                  Depot rate
+                </span>
+                {minimumPrice > 0 ? (
+                  <div>
+                    <span className="text-2xl font-extrabold tabular-nums text-text-primary">
+                      {minimumPrice === maximumPrice
+                        ? formatMoney(minimumPrice)
+                        : `${formatMoney(minimumPrice)} - ${formatMoney(maximumPrice)}`}
+                    </span>
+                    <span className="ml-1 text-sm text-text-secondary">/ {product.unit}</span>
+                  </div>
+                ) : (
+                  <span className="text-lg font-bold text-brand">Price on request</span>
+                )}
+              </div>
+              <span className="text-xs text-text-muted">
+                Confirm current price and quantity before payment
+              </span>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+              <a href={BUSINESS.phoneHref}>
+                <Button size="sm">
+                  <Package className="h-4 w-4" aria-hidden="true" />
+                  Call to order
+                </Button>
+              </a>
+              <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
+                <Button size="sm" variant="secondary">
+                  WhatsApp order
+                </Button>
+              </a>
+              <Link
+                to={`${ROUTES.REQUEST_QUOTE}?product=${encodeURIComponent(product.name)}`}
+              >
+                <Button size="sm" variant="outline">
+                  Add to quote
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {specs.length > 0 && (
+            <div>
+              <h2 className="text-lg font-bold text-text-primary">Available options</h2>
+              <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 rounded-xl border border-border bg-surface p-5 sm:grid-cols-2">
+                {specs.map((spec) => (
+                  <div key={spec.label}>
+                    <dt className="text-2xs font-bold uppercase tracking-wider text-text-muted">
+                      {spec.label}
+                    </dt>
+                    <dd className="mt-0.5 text-sm text-text-primary">{spec.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-12">
+        <div className="lg:col-span-8">
+          <section>
+            <h2 className="text-xl font-bold tracking-tight text-text-primary sm:text-2xl">
+              Buying {product.category.toLowerCase()} in Lokoja
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-text-secondary sm:text-base">
+              {categoryContent.intro}
+            </p>
+            <ul className="mt-4 space-y-2.5">
+              {categoryContent.buyingTips.map((tip) => (
+                <li
+                  key={tip}
+                  className="flex items-start gap-2.5 text-sm leading-relaxed text-text-secondary"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand"
+                  />
+                  {tip}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <FaqList faqs={categoryContent.faqs} />
+        </div>
+
+        <aside className="space-y-6 lg:col-span-4">
+          <Card variant="soft" className="p-6">
+            <h2 className="text-base font-bold text-text-primary">Need a bulk price?</h2>
+            <p className="mt-1 text-sm leading-relaxed text-text-secondary">
+              Send your full material list and quantities. Our sales desk will confirm bulk
+              availability, current rates and delivery for your site.
+            </p>
+            <Link to={ROUTES.REQUEST_QUOTE} className="mt-4 block">
+              <Button className="w-full">Request a quote</Button>
+            </Link>
+          </Card>
+
+          <Card variant="soft" className="p-6">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-text-primary">
+              Related
+            </h3>
+            <ul className="mt-3 space-y-2.5 text-sm">
+              <li>
+                <Link
+                  to={`/categories/${encodeURIComponent(product.categoryId || product.category)}`}
+                  className="text-text-secondary transition-colors hover:text-brand"
+                >
+                  More {product.category.toLowerCase()}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to={ROUTES.GUIDES}
+                  className="text-text-secondary transition-colors hover:text-brand"
+                >
+                  Building material buying guides
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to={ROUTES.DELIVERY}
+                  className="text-text-secondary transition-colors hover:text-brand"
+                >
+                  Delivery and pickup information
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to={ROUTES.PRODUCTS}
+                  className="font-semibold text-brand transition-colors hover:text-brand-hover"
+                >
+                  Full materials catalogue
+                </Link>
+              </li>
+            </ul>
+          </Card>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
 export function ProductsPage() {
   const { productId, categoryId } = useParams();
   const [searchParams] = useSearchParams();
@@ -218,12 +456,15 @@ export function ProductsPage() {
       key: `${item.productId}:${item.id}`,
       productId: item.productId,
       name: item.productName,
+      description: item.productDescription,
+      categoryId: item.categoryId,
       category: item.categoryName || 'Building Materials',
       price: item.sellingPrice,
       unit: item.unit,
       brand: item.brand,
       imageUrl: item.imageUrl || getProductImage(item.productName, item.categoryName),
       quantityOnHand: item.quantityOnHand,
+      attributes: item.attributes,
     }));
   }, [items, loading]);
 
@@ -353,9 +594,15 @@ export function ProductsPage() {
       ],
     });
 
+    setFaqSchema(
+      'faq-schema',
+      getCategoryContent(product.categoryId, product.category).faqs,
+    );
+
     return () => {
       removeJsonLd('product-schema');
       removeJsonLd('product-breadcrumb-schema');
+      removeJsonLd('faq-schema');
     };
   }, [productId, products, loading]);
 
@@ -407,14 +654,20 @@ export function ProductsPage() {
       ],
     });
 
-    return () => removeJsonLd('category-breadcrumb-schema');
+    setFaqSchema('faq-schema', getCategoryContent(categoryId, categoryName).faqs);
+
+    return () => {
+      removeJsonLd('category-breadcrumb-schema');
+      removeJsonLd('faq-schema');
+    };
   }, [categoryId, items]);
 
-  const matchedProduct = productId
-    ? products.find(
+  const productVariants = productId
+    ? products.filter(
         (product) => (product.productId || product.key) === productId,
       )
-    : undefined;
+    : [];
+  const matchedProduct = productVariants[0];
   const categoryHeading = categoryId
     ? items.find(
         (item) =>
@@ -428,6 +681,9 @@ export function ProductsPage() {
     matchedProduct?.name ||
     categoryHeading ||
     'Building Materials Catalogue';
+  const categoryContent = categoryId
+    ? getCategoryContent(categoryId, categoryHeading)
+    : undefined;
   const pageDescription = matchedProduct
     ? `Current depot pricing and availability for ${matchedProduct.name} in Lokoja, Kogi State.`
     : categoryHeading
@@ -470,36 +726,57 @@ export function ProductsPage() {
             }
           />
 
-          <div className="flex flex-col gap-4 pt-2 md:flex-row md:items-center md:justify-between">
-            <SegmentedControl
-              options={categories.map((category) => ({ value: category, label: category }))}
-              value={activeCategory}
-              onChange={selectCategory}
-              size="sm"
-              ariaLabel="Filter by category"
-              className="md:flex-1"
-            />
-
-            <div className="w-full shrink-0 md:max-w-xs">
-              <SearchInput
-                value={search}
-                onChange={setSearch}
-                placeholder="Search materials or brands…"
-                ariaLabel="Search materials"
-                className="w-full"
+          {!productId && (
+            <div className="flex flex-col gap-4 pt-2 md:flex-row md:items-center md:justify-between">
+              <SegmentedControl
+                options={categories.map((category) => ({ value: category, label: category }))}
+                value={activeCategory}
+                onChange={selectCategory}
+                size="sm"
+                ariaLabel="Filter by category"
+                className="md:flex-1"
               />
+
+              <div className="w-full shrink-0 md:max-w-xs">
+                <SearchInput
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="Search materials or brands…"
+                  ariaLabel="Search materials"
+                  className="w-full"
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
       <section className="py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <p className="mb-6 text-xs font-semibold uppercase tracking-wider text-text-secondary">
-            {loading
-              ? 'Loading materials catalogue…'
-              : `Showing ${filtered.length} product${filtered.length !== 1 ? 's' : ''}`}
-          </p>
+          {productId ? (
+            matchedProduct ? (
+              <ProductDetailView variants={productVariants} />
+            ) : (
+              !loading && (
+                <EmptyState
+                  icon={<Package className="h-8 w-8" aria-hidden="true" />}
+                  title="Product not found"
+                  description="This product is no longer in the catalogue. Browse the full materials list for current stock and pricing."
+                  action={
+                    <Link to={ROUTES.PRODUCTS}>
+                      <Button variant="primary">Browse materials</Button>
+                    </Link>
+                  }
+                />
+              )
+            )
+          ) : (
+            <>
+              <p className="mb-6 text-xs font-semibold uppercase tracking-wider text-text-secondary">
+                {loading
+                  ? 'Loading materials catalogue…'
+                  : `Showing ${filtered.length} product${filtered.length !== 1 ? 's' : ''}`}
+              </p>
 
           {filtered.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -590,6 +867,61 @@ export function ProductsPage() {
                 }
               />
             )
+          )}
+            </>
+          )}
+
+          {categoryContent && categoryHeading && (
+            <div className="mt-14 grid grid-cols-1 gap-10 border-t border-border pt-10 lg:grid-cols-12">
+              <div className="lg:col-span-8">
+                <h2 className="text-xl font-bold tracking-tight text-text-primary sm:text-2xl">
+                  Buying {categoryHeading.toLowerCase()} in Lokoja
+                </h2>
+                <p className="mt-3 text-sm leading-relaxed text-text-secondary sm:text-base">
+                  {categoryContent.intro}
+                </p>
+                <ul className="mt-4 space-y-2.5">
+                  {categoryContent.buyingTips.map((tip) => (
+                    <li
+                      key={tip}
+                      className="flex items-start gap-2.5 text-sm leading-relaxed text-text-secondary"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand"
+                      />
+                      {tip}
+                    </li>
+                  ))}
+                </ul>
+                <FaqList faqs={categoryContent.faqs} />
+              </div>
+
+              <aside className="lg:col-span-4">
+                <Card variant="soft" className="p-6">
+                  <h2 className="text-base font-bold text-text-primary">
+                    Need help choosing?
+                  </h2>
+                  <p className="mt-1 text-sm leading-relaxed text-text-secondary">
+                    Tell us what you are building and we will help you confirm the right sizes,
+                    quantities and current prices before you order.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <a href={BUSINESS.phoneHref}>
+                      <Button size="sm">
+                        <Package className="h-4 w-4" aria-hidden="true" />
+                        Call the sales desk
+                      </Button>
+                    </a>
+                    <Link to={ROUTES.REQUEST_QUOTE}>
+                      <Button size="sm" variant="outline">
+                        Request a quote
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              </aside>
+            </div>
           )}
         </div>
       </section>

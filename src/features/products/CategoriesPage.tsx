@@ -5,8 +5,9 @@ import { Input, Textarea } from '@/components/ui/Input';
 
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Modal } from '@/components/ui/Modal';
+import { DeleteRecordButton } from '@/components/common/DeleteRecordButton';
 import { DataTable } from '@/components/tables/DataTable';
-import { BUSINESS_ID, categoryService } from '@/services';
+import { BUSINESS_ID, catalogueService, categoryService } from '@/services';
 import { PERMISSIONS } from '@/constants';
 import { useAuth } from '@/features/auth';
 import { toast } from '@/lib/toast';
@@ -92,12 +93,19 @@ export function CategoriesPage() {
     if (!window.confirm(`Remove "${category.name}"? Products keep their history.`)) return;
     try {
       await categoryService.deactivate(category.id);
+      catalogueService.invalidate();
       toast('Category deactivated.', 'success');
       await loadData();
     } catch (error) {
       console.error(error);
       toast('Could not deactivate the category.', 'error');
     }
+  };
+
+  const remove = async (category: Category) => {
+    await categoryService.remove(category.id);
+    catalogueService.invalidate();
+    await loadData();
   };
 
   const columns = [
@@ -149,6 +157,12 @@ export function CategoriesPage() {
                   <Trash2 className="h-3 w-3 text-danger-fg" />
                 </Button>
               )}
+              <DeleteRecordButton
+                entityLabel="Category"
+                recordLabel={cat.name}
+                description="Products keep their history but will no longer be grouped under this category."
+                onDelete={() => remove(cat)}
+              />
             </>
           )}
         </div>
@@ -201,6 +215,13 @@ export function CategoriesPage() {
                       <Trash2 className="h-3.5 w-3.5 text-danger-fg" />
                     </Button>
                   )}
+                  <DeleteRecordButton
+                    entityLabel="Category"
+                    recordLabel={cat.name}
+                    description="Products keep their history but will no longer be grouped under this category."
+                    onDelete={() => remove(cat)}
+                    showLabel={false}
+                  />
                 </>
               )}
             </div>

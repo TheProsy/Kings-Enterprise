@@ -8,6 +8,7 @@ import { SearchInput } from '@/components/forms/SearchInput';
 import { DateRangeFilter } from '@/components/forms/DateRangeFilter';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { DataTable } from '@/components/tables/DataTable';
+import { DeleteRecordButton } from '@/components/common/DeleteRecordButton';
 import { receiptService } from '@/services';
 import { buildRoute, PERMISSIONS, ROLES, ROUTES } from '@/constants';
 import { formatDateTime, formatMoney, toMillis } from '@/lib/formatters';
@@ -134,6 +135,11 @@ export function ReceiptsPage() {
     navigate(buildRoute(ROUTES.APP_RECEIPT_DETAIL, { receiptId: receipt.id }));
   };
 
+  const removeReceipt = async (receipt: Receipt) => {
+    await receiptService.remove(receipt.id);
+    setReceipts((current) => current.filter((entry) => entry.id !== receipt.id));
+  };
+
   const columns = [
     {
       key: 'issuedAt',
@@ -232,16 +238,25 @@ export function ReceiptsPage() {
       headerClassName: 'text-right',
       className: 'text-right',
       render: (receipt: Receipt) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={(event) => {
-            event.stopPropagation();
-            openReceipt(receipt);
-          }}
-        >
-          Open
-        </Button>
+        <div className="flex items-center justify-end gap-1">
+          <DeleteRecordButton
+            entityLabel="Receipt"
+            recordLabel={receipt.receiptNumber}
+            description="Only this document is removed; the linked sale, payments and stock records are kept."
+            showLabel={false}
+            onDelete={() => removeReceipt(receipt)}
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(event) => {
+              event.stopPropagation();
+              openReceipt(receipt);
+            }}
+          >
+            Open
+          </Button>
+        </div>
       ),
     },
   ];
@@ -387,6 +402,15 @@ export function ReceiptsPage() {
             <div className="flex items-center justify-between text-2xs text-text-muted">
               <span>{formatDateTime(receipt.issuedAt || receipt.createdAt)}</span>
               <span className="font-semibold text-brand">Tap to open →</span>
+            </div>
+
+            <div className="flex justify-end">
+              <DeleteRecordButton
+                entityLabel="Receipt"
+                recordLabel={receipt.receiptNumber}
+                description="Only this document is removed; the linked sale, payments and stock records are kept."
+                onDelete={() => removeReceipt(receipt)}
+              />
             </div>
           </div>
         )}

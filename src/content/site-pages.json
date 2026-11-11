@@ -1,0 +1,218 @@
+{
+  "delivery": {
+    "path": "/delivery",
+    "title": "Delivery & Pickup",
+    "seoTitle": "Building Material Delivery in Lokoja | Kings Building Materials",
+    "description": "How delivery and depot pickup work at Blessed Kings Enterprises (Kings Building Materials) in Lokoja, Kogi State. Confirm vehicle access, quantities and timing before dispatch.",
+    "intro": "We arrange delivery for cement, iron rods, roofing, timber, blocks, plumbing supplies and other building materials from our Lokoja depot. Delivery is planned around the material quantity, vehicle size, road access and your site readiness. Contact our sales desk to confirm availability and the current delivery arrangement for your location.",
+    "updated": "2026-11-11",
+    "sections": [
+      {
+        "heading": "Delivery coverage",
+        "paragraphs": [
+          "Our main delivery area is Lokoja and surrounding communities in Kogi State. Deliveries to other towns can be arranged depending on the quantity, vehicle availability and distance.",
+          "For locations outside Lokoja, send your full material list, site address and preferred delivery date by phone or WhatsApp so we can confirm the logistics before you pay."
+        ]
+      },
+      {
+        "heading": "How to place a delivery order",
+        "paragraphs": [
+          "Start with a clear list of materials, quantities and units. Include the product name, brand where it matters, and any size or thickness requirements.",
+          "Tell us the delivery address, the nearest landmark, the type of vehicle that can reach the site, and whether there is space to turn around and offload. We will confirm stock, pricing and the delivery plan before dispatch."
+        ],
+        "bullets": [
+          "Send your material list and site location.",
+          "Confirm product availability and current pricing.",
+          "Agree the delivery date and offloading arrangement.",
+          "Keep your phone reachable on the delivery day."
+        ]
+      },
+      {
+        "heading": "Preparing your site for delivery",
+        "paragraphs": [
+          "Heavy materials such as cement, sand, blocks and iron rods need firm ground and safe access. Clear the offloading area before the truck arrives and make sure someone authorised to receive and count the goods is present.",
+          "Check the delivery against your receipt or invoice while the vehicle is still at the site. Report any shortage, damage or wrong item immediately so it can be documented."
+        ]
+      },
+      {
+        "heading": "Depot pickup",
+        "paragraphs": [
+          "You can also arrange your own vehicle and collect materials directly from our Lokoja depot during opening hours. Confirm stock before sending a vehicle, especially for bulk quantities or branded products.",
+          "Bring the name on the order, the phone number used for the order, and your receipt or confirmation message. Loading arrangements depend on the vehicle and the materials being collected."
+        ]
+      },
+      {
+        "heading": "What affects delivery cost",
+        "paragraphs": [
+          "Delivery cost depends on distance, vehicle type, the quantity and weight of the materials, road access and whether the driver has to wait for offloading. We confirm the arrangement with you before dispatch.",
+          "Delivery fees are separate from the material cost unless we agree otherwise in writing. Avoid paying a delivery fee to an unconfirmed account; confirm the business phone number before any transfer."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Do you deliver outside Lokoja?",
+        "answer": "Deliveries outside Lokoja can be arranged in Kogi State and beyond depending on distance, quantity and vehicle availability. Send your location and material list for confirmation."
+      },
+      {
+        "question": "How long does delivery take?",
+        "answer": "Timing depends on stock availability, quantity, vehicle arrangements and your site location. For local deliveries, confirm the expected timing with our sales desk when placing the order."
+      },
+      {
+        "question": "Can I collect materials myself?",
+        "answer": "Yes. You can arrange your own vehicle and collect from our Lokoja depot during opening hours. Confirm stock and loading requirements before sending the vehicle."
+      },
+      {
+        "question": "What should I check when the materials arrive?",
+        "answer": "Count the items, check the brands and quantities against your receipt, and inspect for visible damage while the vehicle is still at the site. Report any issue immediately."
+      }
+    ]
+  },
+  "returns": {
+    "path": "/returns",
+    "title": "Returns & Damaged Goods",
+    "seoTitle": "Returns Policy & Damaged Goods | Kings Building Materials",
+    "description": "How to report damaged, short or incorrect building material deliveries from Blessed Kings Enterprises (Kings Building Materials) in Lokoja, Kogi State.",
+    "intro": "We want every order to arrive complete and in good condition. If something is wrong, report it promptly with your receipt and order details so the issue can be checked and resolved fairly. This page is a practical summary; the terms confirmed on your receipt or invoice apply to each transaction.",
+    "updated": "2026-11-11",
+    "sections": [
+      {
+        "heading": "Damaged or short deliveries",
+        "paragraphs": [
+          "Check the goods while the delivery vehicle is still at your site. Count the quantities, confirm the brands or sizes supplied, and note any visible damage before offloading is completed.",
+          "If an item is damaged, short or different from what was agreed, stop and contact our sales desk immediately. Take clear photos of the material, the packaging and the delivery note where possible."
+        ],
+        "bullets": [
+          "Keep your receipt, invoice or delivery confirmation.",
+          "Report the issue on the delivery day whenever possible.",
+          "Send photos and a short description of the problem.",
+          "Do not use or install damaged materials before the issue is reviewed."
+        ]
+      },
+      {
+        "heading": "Incorrect or unwanted items",
+        "paragraphs": [
+          "If you selected the wrong item, contact us before using or opening it. Unused materials may be considered for exchange if they are in original condition, are not damaged, and can be verified against the receipt.",
+          "Cut, mixed, installed, painted or specially ordered materials may not be returnable. Cement and other moisture-sensitive products must be stored correctly; we cannot accept materials that have been exposed to water or poor storage."
+        ]
+      },
+      {
+        "heading": "Refunds and replacements",
+        "paragraphs": [
+          "After review, we may arrange a replacement, credit note or refund depending on the product, the condition of the goods and the circumstances of the order. Delivery and loading costs may not be refundable once the service has been provided.",
+          "Refunds are made through the same payment channel used for the order where possible. Bring the original receipt or provide the receipt number when requesting a review."
+        ]
+      },
+      {
+        "heading": "How to contact us",
+        "paragraphs": [
+          "Call or WhatsApp +234 901 852 7535 with your receipt number, the product name and a description of the issue. Our team will confirm the next step and whether the materials need to be returned to the depot."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "What should I do if cement bags are torn or wet?",
+        "answer": "Do not use the affected bags. Photograph them, keep them separate and contact us immediately with your receipt number so the delivery can be reviewed."
+      },
+      {
+        "question": "Can I return unused materials?",
+        "answer": "Unused materials may be considered for exchange if they are in original condition and can be verified against your receipt. Cut, mixed, installed or specially ordered items may not be returnable."
+      },
+      {
+        "question": "How long do I have to report a problem?",
+        "answer": "Report shortages, damage or incorrect items as soon as possible, preferably on the delivery day while the vehicle is still at the site."
+      }
+    ]
+  },
+  "privacy": {
+    "path": "/privacy",
+    "title": "Privacy Policy",
+    "seoTitle": "Privacy Policy | Kings Building Materials, Lokoja",
+    "description": "How Blessed Kings Enterprises (Kings Building Materials) collects, uses and protects information submitted through this website, quote requests and contact forms.",
+    "intro": "This policy explains what information we collect when you use this website, request a quote or contact our team, and how that information is used. We keep the process simple: we use your details to respond to your enquiry and support your order.",
+    "updated": "2026-11-11",
+    "sections": [
+      {
+        "heading": "Information we collect",
+        "paragraphs": [
+          "When you submit a contact or quote form, we may collect your name, phone number, optional email address, delivery location, product interest, quantity and message.",
+          "We also receive basic technical information through website analytics, such as pages visited, approximate location, device type and referral source. This helps us understand how the site is used and improve it."
+        ]
+      },
+      {
+        "heading": "How we use your information",
+        "paragraphs": [
+          "We use your details to respond to enquiries, prepare quotes, arrange orders and delivery, provide customer support, and keep records of business transactions.",
+          "We do not sell your personal information. We may share the minimum necessary details with delivery, payment or technology providers that help us operate the business."
+        ]
+      },
+      {
+        "heading": "Cookies and analytics",
+        "paragraphs": [
+          "This website may use cookies or similar technologies for analytics and basic functionality. Analytics tools help us measure traffic and improve the site; they are not used to identify you personally.",
+          "You can restrict or delete cookies in your browser settings. Some site features may not work as expected if cookies are disabled."
+        ]
+      },
+      {
+        "heading": "Retention and security",
+        "paragraphs": [
+          "We keep enquiry and transaction records only for as long as needed to respond, provide the service, meet accounting requirements and resolve disputes. We take reasonable steps to protect the information we hold, but no internet transmission can be guaranteed completely secure."
+        ]
+      },
+      {
+        "heading": "Your choices and contact",
+        "paragraphs": [
+          "You can ask us to correct or delete personal information we hold about you, subject to record-keeping and legal requirements. To make a request or ask a question about this policy, call or WhatsApp +234 901 852 7535."
+        ]
+      }
+    ],
+    "faqs": []
+  },
+  "terms": {
+    "path": "/terms",
+    "title": "Terms of Service",
+    "seoTitle": "Terms of Service | Kings Building Materials, Lokoja",
+    "description": "Terms for quotes, orders, payments, delivery and returns at Blessed Kings Enterprises (Kings Building Materials) in Lokoja, Kogi State.",
+    "intro": "These terms summarise how quotes, orders, payments and delivery work at Blessed Kings Enterprises, trading as Kings Building Materials. The details confirmed on your quote, receipt or invoice apply to each transaction.",
+    "updated": "2026-11-11",
+    "sections": [
+      {
+        "heading": "Quotes and pricing",
+        "paragraphs": [
+          "Prices are quoted in Nigerian Naira and depend on current stock, supplier pricing and the quantity required. A quote is not a reservation of stock unless we confirm it in writing.",
+          "Prices may change without notice due to market conditions. Confirm the current price and availability before making payment."
+        ]
+      },
+      {
+        "heading": "Orders and payment",
+        "paragraphs": [
+          "An order is confirmed when we acknowledge it and receive the agreed payment or deposit. Keep your receipt or payment confirmation; it is required for collection, delivery and any later review.",
+          "Please confirm our official account details by calling the business phone number before transferring money. Do not rely on account details from an unverified message."
+        ]
+      },
+      {
+        "heading": "Delivery and collection",
+        "paragraphs": [
+          "Delivery dates and times are estimates based on stock, vehicle availability and site access. Someone authorised to receive the goods should be present at the agreed location.",
+          "The buyer is responsible for providing safe access and a suitable offloading area. Additional waiting time, failed delivery attempts or a change of location may attract extra charges."
+        ]
+      },
+      {
+        "heading": "Materials and suitability",
+        "paragraphs": [
+          "Product images are for illustration and may differ from the current packaging or batch. Technical advice on structural, electrical or plumbing work is general information only; consult a qualified professional for project-specific decisions.",
+          "Check the quantity, brand, size and condition of materials before use. Materials must be stored in line with the manufacturer's guidance, especially cement and moisture-sensitive products."
+        ]
+      },
+      {
+        "heading": "Returns and disputes",
+        "paragraphs": [
+          "Returns and damaged goods are handled under our returns policy. Report problems promptly with your receipt and photos where possible. We will review the facts and agree a fair resolution.",
+          "These terms are governed by the laws of the Federal Republic of Nigeria. For questions, contact +234 901 852 7535."
+        ]
+      }
+    ],
+    "faqs": []
+  }
+}

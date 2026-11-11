@@ -45,6 +45,8 @@ export function BrandLogo({
       src={file}
       alt="Kings Building Materials"
       className={cn('w-auto select-none object-contain', heightClasses, className)}
+      width={960}
+      height={298}
       loading="eager"
     />
   );

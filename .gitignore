@@ -32,3 +32,4 @@ functions/.firebase
 *.njsproj
 *.sln
 *.sw?
+.vercel

@@ -7,6 +7,7 @@ import { Select } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable } from '@/components/tables/DataTable';
+import { DeleteRecordButton } from '@/components/common/DeleteRecordButton';
 import { StatCard } from '@/components/ui/StatCard';
 import { expenseService } from '@/services';
 import { EXPENSE_CATEGORIES, PERMISSIONS, ROUTES } from '@/constants';
@@ -40,6 +41,11 @@ export function ExpensesPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const removeExpense = async (expense: Expense) => {
+    await expenseService.remove(expense.id);
+    setExpenses((current) => current.filter((entry) => entry.id !== expense.id));
+  };
 
   const filtered = useMemo(() => {
     return expenses.filter((e) => {
@@ -96,6 +102,19 @@ export function ExpensesPage() {
       className: 'text-right',
       render: (e: Expense) => (
         <span className="font-bold text-sm text-danger-fg">{formatMoney(e.amount)}</span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      render: (e: Expense) => (
+        <DeleteRecordButton
+          entityLabel="Expense"
+          recordLabel={e.description}
+          onDelete={() => removeExpense(e)}
+        />
       ),
     },
   ];
@@ -173,8 +192,13 @@ export function ExpensesPage() {
               </div>
               <span className="font-bold text-sm text-danger-fg">{formatMoney(e.amount)}</span>
             </div>
-            <div className="pt-1">
+            <div className="flex items-center justify-between pt-1">
               <Badge variant="neutral">{e.category}</Badge>
+              <DeleteRecordButton
+                entityLabel="Expense"
+                recordLabel={e.description}
+                onDelete={() => removeExpense(e)}
+              />
             </div>
           </div>
         )}

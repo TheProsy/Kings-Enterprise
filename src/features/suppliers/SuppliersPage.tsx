@@ -5,6 +5,7 @@ import { SearchInput } from '@/components/forms/SearchInput';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Modal } from '@/components/ui/Modal';
 import { DataTable } from '@/components/tables/DataTable';
+import { DeleteRecordButton } from '@/components/common/DeleteRecordButton';
 import { Badge } from '@/components/ui/Badge';
 import { BUSINESS_ID, supplierService } from '@/services';
 import { PERMISSIONS, ROUTES, buildRoute } from '@/constants';
@@ -79,6 +80,11 @@ export function SuppliersPage() {
       (supplier.phone ? supplier.phone.includes(search) : false),
   );
 
+  const removeSupplier = async (supplier: Supplier) => {
+    await supplierService.remove(supplier.id);
+    setSuppliers((current) => current.filter((entry) => entry.id !== supplier.id));
+  };
+
   const columns = [
     {
       key: 'name',
@@ -132,13 +138,22 @@ export function SuppliersPage() {
       headerClassName: 'text-right',
       className: 'text-right',
       render: (s: Supplier) => (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => navigate(buildRoute(ROUTES.APP_SUPPLIER_DETAIL, { supplierId: s.id }))}
-        >
-          View Statement
-        </Button>
+        <div className="flex items-center justify-end gap-1">
+          <DeleteRecordButton
+            entityLabel="Supplier"
+            recordLabel={s.name}
+            description="Purchases and payments linked to this supplier are kept."
+            showLabel={false}
+            onDelete={() => removeSupplier(s)}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(buildRoute(ROUTES.APP_SUPPLIER_DETAIL, { supplierId: s.id }))}
+          >
+            View Statement
+          </Button>
+        </div>
       ),
     },
   ];
@@ -211,7 +226,13 @@ export function SuppliersPage() {
               </div>
             </div>
 
-            <div className="flex justify-end pt-1">
+            <div className="flex items-center justify-between pt-1">
+              <DeleteRecordButton
+                entityLabel="Supplier"
+                recordLabel={s.name}
+                description="Purchases and payments linked to this supplier are kept."
+                onDelete={() => removeSupplier(s)}
+              />
               <span className="text-xs font-semibold text-brand flex items-center">
                 View Statement <ChevronRight className="h-3 w-3 ml-0.5" />
               </span>

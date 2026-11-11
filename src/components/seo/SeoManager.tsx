@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import sitePagesData from '@/content/site-pages.json';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, SITE_NAME } from '@/config/site';
 import { applyNoIndex, applySeo } from '@/lib/seo';
 
@@ -8,6 +9,19 @@ interface RouteSeo {
   description: string;
   type?: 'website' | 'product' | 'article';
 }
+
+interface TrustPageMeta {
+  path: string;
+  seoTitle: string;
+  description: string;
+}
+
+const TRUST_ROUTES = Object.fromEntries(
+  Object.values(sitePagesData as Record<string, TrustPageMeta>).map((page) => [
+    page.path,
+    { title: page.seoTitle, description: page.description },
+  ]),
+) as Record<string, RouteSeo>;
 
 const STATIC_ROUTES: Record<string, RouteSeo> = {
   '/': {
@@ -34,6 +48,12 @@ const STATIC_ROUTES: Record<string, RouteSeo> = {
     description:
       'Send your material list to Kings Building Materials for a fast quote. Cement, iron rods, roofing, timber, plumbing and construction tools in Lokoja, Kogi State.',
   },
+  '/guides': {
+    title: `Building Material Buying Guides | ${SITE_NAME}`,
+    description:
+      'Practical buying guides for cement, iron rods, roofing, plumbing and construction materials in Lokoja, Kogi State from Kings Building Materials.',
+  },
+  ...TRUST_ROUTES,
 };
 
 const PRIVATE_PREFIXES = [
@@ -43,20 +63,6 @@ const PRIVATE_PREFIXES = [
   '/unauthorized',
   '/not-found',
 ];
-
-function safeDecode(value: string): string {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-}
-
-function titleCase(value: string): string {
-  return value
-    .replace(/[-_]+/g, ' ')
-    .replace(/\b\w/g, (character) => character.toUpperCase());
-}
 
 export function SeoManager() {
   const { pathname } = useLocation();
@@ -79,25 +85,13 @@ export function SeoManager() {
       return;
     }
 
-    const categoryMatch = path.match(/^\/categories\/([^/]+)$/);
-    if (categoryMatch) {
-      const category = titleCase(safeDecode(categoryMatch[1]));
-      applySeo({
-        title: `${category} in Lokoja | ${SITE_NAME}`,
-        description: `Browse ${category.toLowerCase()} prices and availability at ${SITE_NAME} in Lokoja, Kogi State. Request a quote or order by phone and WhatsApp.`,
-        path,
-      });
+    // Guide detail pages set their own article metadata from guide data.
+    if (/^\/guides\/[^/]+$/.test(path)) {
       return;
     }
 
-    const productMatch = path.match(/^\/products\/([^/]+)$/);
-    if (productMatch) {
-      applySeo({
-        title: `Building Material Product | ${SITE_NAME}`,
-        description: `View product details, current depot pricing and availability at ${SITE_NAME} in Lokoja, Kogi State. Bulk and retail supply with prompt site delivery.`,
-        path,
-        type: 'product',
-      });
+    // Category and product pages set precise metadata from catalogue data.
+    if (/^\/(categories|products)\/[^/]+$/.test(path)) {
       return;
     }
 

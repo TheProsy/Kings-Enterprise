@@ -143,7 +143,7 @@ service cloud.firestore {
       allow create: if isOwner(businessId) || hasPermission(businessId, 'products:create');
       allow update:
         if isOwner(businessId) || hasPermission(businessId, 'products:edit');
-      allow delete: if isOwner(businessId) || hasPermission(businessId, 'products:delete');
+      allow delete: if isOwner(businessId);
 
       match /variants/{variantId} {
         allow read: if true;
@@ -169,7 +169,7 @@ service cloud.firestore {
                 'updatedAt'
               ])
             );
-        allow delete: if isOwner(businessId) || hasPermission(businessId, 'products:edit');
+        allow delete: if isOwner(businessId);
       }
     }
 
@@ -182,7 +182,7 @@ service cloud.firestore {
         if isOwner(businessId) || hasPermission(businessId, 'products:create');
       allow update:
         if isOwner(businessId) || hasPermission(businessId, 'products:edit');
-      allow delete: if isOwner(businessId) || hasPermission(businessId, 'products:edit');
+      allow delete: if isOwner(businessId);
     }
 
     // ------------------------------------------------------------------
@@ -235,7 +235,8 @@ service cloud.firestore {
     match /businesses/{businessId}/stockMovements/{movementId} {
       allow read: if isBusinessMember(businessId);
       allow create: if isBusinessMember(businessId);
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if isOwner(businessId);
     }
 
     // ------------------------------------------------------------------
@@ -263,7 +264,7 @@ service cloud.firestore {
             changesOnlyVoidFields()
           )
         );
-      allow delete: if isOwner(businessId) || hasPermission(businessId, 'sales:cancel');
+      allow delete: if isOwner(businessId);
     }
 
     // Receipts are immutable except for the narrow void stamp applied to the
@@ -319,7 +320,7 @@ service cloud.firestore {
           'voidReceiptNumber',
           'updatedAt'
         ]);
-      allow delete: if false;
+      allow delete: if isOwner(businessId);
     }
 
     // Yearly receipt numbering counters. The POS increments the matching
@@ -463,7 +464,8 @@ service cloud.firestore {
           hasPermission(businessId, 'sales:create') ||
           hasPermission(businessId, 'receipts:create')
         );
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if isOwner(businessId);
     }
 
     // ------------------------------------------------------------------

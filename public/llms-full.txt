@@ -67,6 +67,12 @@ No public email address, street address, map pin or social media profile is curr
 - /about - Company background and service approach.
 - /contact - Contact details, location and opening hours.
 - /request-quote - Quote request form for material lists and delivery enquiries.
+- /guides - Building material buying guides for cement, iron rods, quantity estimates, roofing, plumbing and delivery.
+- /guides/{guide-slug} - Individual buying guide with practical checks and FAQs.
+- /delivery - Delivery, pickup and site scheduling information.
+- /returns - Returns, damaged goods and order issue process.
+- /privacy - Privacy policy for website enquiries.
+- /terms - Website and ordering terms.
 - /app, /login, /forgot-password - Private staff management area; not public content.
 
 ## Frequently asked questions

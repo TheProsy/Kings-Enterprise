@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { DataTable } from '@/components/tables/DataTable';
+import { DeleteRecordButton } from '@/components/common/DeleteRecordButton';
 import { purchaseService, paymentService } from '@/services';
 import { formatMoney, formatDate } from '@/lib/formatters';
 import { purchaseBalancesAfterPayments } from '@/lib/payments';
@@ -46,6 +47,11 @@ export function PurchasesPage() {
     () => purchaseBalancesAfterPayments(purchases, payments),
     [purchases, payments],
   );
+
+  const removePurchase = async (purchase: Purchase) => {
+    await purchaseService.remove(purchase.id);
+    await loadData();
+  };
 
   const filteredPurchases = purchases.filter((p) => {
     const q = search.toLowerCase();
@@ -145,6 +151,20 @@ export function PurchasesPage() {
         </Badge>
       ),
     },
+    {
+      key: 'actions',
+      header: '',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      render: (p: Purchase) => (
+        <DeleteRecordButton
+          entityLabel="Purchase"
+          recordLabel={p.purchaseNumber || p.id.slice(0, 8)}
+          description="The received stock is deducted from inventory and the supplier balance is reduced."
+          onDelete={() => removePurchase(p)}
+        />
+      ),
+    },
   ];
 
   return (
@@ -225,6 +245,15 @@ export function PurchasesPage() {
             <div className="flex items-center justify-between text-2xs text-text-muted pt-0.5">
               <span>{formatDate(p.createdAt)}</span>
               <span>{p.items?.length || 0} material variants</span>
+            </div>
+
+            <div className="flex justify-end">
+              <DeleteRecordButton
+                entityLabel="Purchase"
+                recordLabel={p.purchaseNumber || p.id.slice(0, 8)}
+                description="The received stock is deducted from inventory and the supplier balance is reduced."
+                onDelete={() => removePurchase(p)}
+              />
             </div>
           </div>
           );

@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { DataTable } from '@/components/tables/DataTable';
 import { Modal } from '@/components/ui/Modal';
+import { DeleteRecordButton } from '@/components/common/DeleteRecordButton';
 import { saleService } from '@/services';
 import { PERMISSIONS, ROUTES, buildRoute } from '@/constants';
 import { useAuth } from '@/features/auth';
@@ -51,6 +52,12 @@ export function SalesHistoryPage() {
       return receiptMatch || customerMatch;
     });
   }, [sales, search]);
+
+  const removeSale = async (sale: Sale) => {
+    await saleService.remove(sale.id);
+    setSales((current) => current.filter((entry) => entry.id !== sale.id));
+    setSelectedSale((current) => (current?.id === sale.id ? null : current));
+  };
 
   const columns = [
     {
@@ -156,14 +163,23 @@ export function SalesHistoryPage() {
       headerClassName: 'text-right',
       className: 'text-right',
       render: (sale: Sale) => (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setSelectedSale(sale)}
-          aria-label="View Receipt"
-        >
-          <Eye className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex items-center justify-end gap-1">
+          <DeleteRecordButton
+            entityLabel="Sale"
+            recordLabel={sale.receiptNumber}
+            description="Sold stock is returned to inventory, the customer balance is reversed, and linked receipts and payments are removed."
+            showLabel={false}
+            onDelete={() => removeSale(sale)}
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setSelectedSale(sale)}
+            aria-label="View Receipt"
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -252,6 +268,15 @@ export function SalesHistoryPage() {
               <span>{formatDate(sale.createdAt)}</span>
               <span className="text-brand font-semibold">Tap to view receipt →</span>
             </div>
+
+            <div className="flex justify-end">
+              <DeleteRecordButton
+                entityLabel="Sale"
+                recordLabel={sale.receiptNumber}
+                description="Sold stock is returned to inventory, the customer balance is reversed, and linked receipts and payments are removed."
+                onDelete={() => removeSale(sale)}
+              />
+            </div>
           </div>
         )}
       />
@@ -331,7 +356,13 @@ export function SalesHistoryPage() {
               )}
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+              <DeleteRecordButton
+                entityLabel="Sale"
+                recordLabel={selectedSale.receiptNumber}
+                description="Sold stock is returned to inventory, the customer balance is reversed, and linked receipts and payments are removed."
+                onDelete={() => removeSale(selectedSale)}
+              />
               {selectedSale.receiptId ? (
                 <Button
                   size="sm"

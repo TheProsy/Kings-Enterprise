@@ -8,9 +8,10 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { formatMoney } from '@/lib/formatters';
 import { catalogueService, type CatalogueItem } from '@/services';
-import { Truck, Package, CreditCard, Users, ChevronRight } from 'lucide-react';
+import { Truck, Package, CreditCard, Users, ChevronRight, BookOpen } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { getProductImage, getCategoryImage } from '@/constants/images';
+import { GUIDES } from '@/pages/public/GuidesPage';
 
 const FEATURES = [
   {
@@ -311,6 +312,62 @@ export function HomePage() {
                     </Button>
                   </div>
                 </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Buying guides */}
+      <section className="border-t border-border bg-surface-2 py-16 sm:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand">
+                <BookOpen className="h-4 w-4" aria-hidden="true" />
+                Buying guides
+              </div>
+              <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-text-primary sm:text-3xl">
+                Plan your materials before you buy
+              </h2>
+              <p className="mt-1 text-sm text-text-secondary">
+                Practical advice on cement grades, iron rod sizes, quantity estimates, roofing
+                and delivery in Lokoja.
+              </p>
+            </div>
+            <NavLink
+              to={ROUTES.GUIDES}
+              className="inline-flex items-center gap-1 text-sm font-bold text-brand hover:underline"
+            >
+              <span>All guides</span>
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </NavLink>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            {GUIDES.slice(0, 3).map((guide) => (
+              <Card key={guide.slug} variant="interactive" className="flex flex-col p-6">
+                <p className="text-2xs font-semibold uppercase tracking-wider text-text-muted">
+                  {guide.readingTime}
+                </p>
+                <h3 className="mt-2 text-base font-bold leading-snug text-text-primary">
+                  <Link
+                    to={`${ROUTES.GUIDES}/${guide.slug}`}
+                    className="transition-colors hover:text-brand"
+                  >
+                    {guide.title}
+                  </Link>
+                </h3>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-text-secondary">
+                  {guide.description}
+                </p>
+                <Link
+                  to={`${ROUTES.GUIDES}/${guide.slug}`}
+                  className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-brand hover:text-brand-hover"
+                >
+                  Read guide
+                  <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </Link>
               </Card>
             ))}
           </div>

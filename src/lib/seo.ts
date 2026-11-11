@@ -114,10 +114,58 @@ export function applyNoIndex(
   removeJsonLd('product-schema');
   removeJsonLd('product-breadcrumb-schema');
   removeJsonLd('category-breadcrumb-schema');
+  removeJsonLd('itemlist-schema');
+  removeJsonLd('faq-schema');
+  removeJsonLd('article-schema');
+  removeJsonLd('page-breadcrumb-schema');
   upsertMeta('property', 'og:title', title);
   upsertMeta('property', 'og:description', description);
   upsertMeta('name', 'twitter:title', title);
   upsertMeta('name', 'twitter:description', description);
+}
+
+export interface SeoBreadcrumbItem {
+  name: string;
+  path: string;
+}
+
+export function setBreadcrumbSchema(
+  id: string,
+  items: SeoBreadcrumbItem[],
+) {
+  setJsonLd(id, {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: absoluteUrl(item.path),
+    })),
+  });
+}
+
+export function setFaqSchema(
+  id: string,
+  faqs: Array<{ question: string; answer: string }>,
+) {
+  if (faqs.length === 0) {
+    removeJsonLd(id);
+    return;
+  }
+
+  setJsonLd(id, {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  });
 }
 
 export function setJsonLd(id: string, data: Record<string, unknown>) {

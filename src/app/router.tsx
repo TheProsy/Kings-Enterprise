@@ -1,3 +1,4 @@
+import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RootLayout } from '@/app/RootLayout';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -7,46 +8,64 @@ import { AboutPage } from '@/pages/public/AboutPage';
 import { ProductsPage as PublicProductsPage } from '@/pages/public/ProductsPage';
 import { ContactPage } from '@/pages/public/ContactPage';
 import { RequestQuotePage } from '@/pages/public/RequestQuotePage';
+import { ContentPage } from '@/pages/public/ContentPage';
+import { GuidesPage } from '@/pages/public/GuidesPage';
+import { GuideDetailPage } from '@/pages/public/GuideDetailPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage';
 import { NotFoundPage, UnauthorizedPage } from '@/pages/errors/NotFoundPage';
 import { RouteErrorPage } from '@/pages/errors/RouteErrorPage';
-import { ROUTES } from '@/constants';
-import { DashboardPage } from '@/features/dashboard';
-import {
-  ProductsPage as MgmtProductsPage,
-  CategoriesPage,
-  LowStockPage,
-  StockHistoryPage,
-  NewProductPage,
-} from '@/features/products';
-import { SalesPage, SalesHistoryPage } from '@/features/sales';
-import { ReceiptsPage, ReceiptDetailPage } from '@/features/receipts';
-import { PurchasesPage, NewPurchasePage } from '@/features/purchases';
-import { SuppliersPage, SupplierDetailPage } from '@/features/suppliers';
-import { CustomersPage, CustomerDetailPage } from '@/features/customers';
-import { ExpensesPage, NewExpensePage } from '@/features/expenses';
-import {
-  FinancePage,
-  MoneyReceivedPage,
-  MoneySpentPage,
-  CustomerDebtsPage,
-  SupplierDebtsPage,
-  CashbookPage,
-} from '@/features/finance';
-import { EmployeesPage, EmployeePermissionsPage } from '@/features/employees';
-import { SettingsPage, AuditLogsPage } from '@/features/settings';
-import { HelpPage } from '@/features/help';
-import {
-  ReportsPage,
-  SalesReportPage,
-  StockReportPage,
-  ProfitReportPage,
-  ExpensesReportPage,
-  DebtsReportPage,
-} from '@/features/reports';
-import { PERMISSIONS } from '@/constants';
+import { ROUTES, PERMISSIONS } from '@/constants';
 import { RequireSession, RequirePermission } from './guards';
+
+function lazyNamed(
+  loader: () => Promise<unknown>,
+  name: string,
+): LazyExoticComponent<ComponentType> {
+  return lazy(async () => {
+    const module = (await loader()) as Record<string, ComponentType>;
+    return { default: module[name] };
+  });
+}
+
+const DashboardPage = lazyNamed(() => import('@/features/dashboard'), 'DashboardPage');
+const MgmtProductsPage = lazyNamed(() => import('@/features/products'), 'ProductsPage');
+const CategoriesPage = lazyNamed(() => import('@/features/products'), 'CategoriesPage');
+const LowStockPage = lazyNamed(() => import('@/features/products'), 'LowStockPage');
+const StockHistoryPage = lazyNamed(() => import('@/features/products'), 'StockHistoryPage');
+const NewProductPage = lazyNamed(() => import('@/features/products'), 'NewProductPage');
+const SalesPage = lazyNamed(() => import('@/features/sales'), 'SalesPage');
+const SalesHistoryPage = lazyNamed(() => import('@/features/sales'), 'SalesHistoryPage');
+const ReceiptsPage = lazyNamed(() => import('@/features/receipts'), 'ReceiptsPage');
+const ReceiptDetailPage = lazyNamed(() => import('@/features/receipts'), 'ReceiptDetailPage');
+const PurchasesPage = lazyNamed(() => import('@/features/purchases'), 'PurchasesPage');
+const NewPurchasePage = lazyNamed(() => import('@/features/purchases'), 'NewPurchasePage');
+const SuppliersPage = lazyNamed(() => import('@/features/suppliers'), 'SuppliersPage');
+const SupplierDetailPage = lazyNamed(() => import('@/features/suppliers'), 'SupplierDetailPage');
+const CustomersPage = lazyNamed(() => import('@/features/customers'), 'CustomersPage');
+const CustomerDetailPage = lazyNamed(() => import('@/features/customers'), 'CustomerDetailPage');
+const ExpensesPage = lazyNamed(() => import('@/features/expenses'), 'ExpensesPage');
+const NewExpensePage = lazyNamed(() => import('@/features/expenses'), 'NewExpensePage');
+const FinancePage = lazyNamed(() => import('@/features/finance'), 'FinancePage');
+const MoneyReceivedPage = lazyNamed(() => import('@/features/finance'), 'MoneyReceivedPage');
+const MoneySpentPage = lazyNamed(() => import('@/features/finance'), 'MoneySpentPage');
+const CustomerDebtsPage = lazyNamed(() => import('@/features/finance'), 'CustomerDebtsPage');
+const SupplierDebtsPage = lazyNamed(() => import('@/features/finance'), 'SupplierDebtsPage');
+const CashbookPage = lazyNamed(() => import('@/features/finance'), 'CashbookPage');
+const EmployeesPage = lazyNamed(() => import('@/features/employees'), 'EmployeesPage');
+const EmployeePermissionsPage = lazyNamed(
+  () => import('@/features/employees'),
+  'EmployeePermissionsPage',
+);
+const SettingsPage = lazyNamed(() => import('@/features/settings'), 'SettingsPage');
+const AuditLogsPage = lazyNamed(() => import('@/features/settings'), 'AuditLogsPage');
+const HelpPage = lazyNamed(() => import('@/features/help'), 'HelpPage');
+const ReportsPage = lazyNamed(() => import('@/features/reports'), 'ReportsPage');
+const SalesReportPage = lazyNamed(() => import('@/features/reports'), 'SalesReportPage');
+const StockReportPage = lazyNamed(() => import('@/features/reports'), 'StockReportPage');
+const ProfitReportPage = lazyNamed(() => import('@/features/reports'), 'ProfitReportPage');
+const ExpensesReportPage = lazyNamed(() => import('@/features/reports'), 'ExpensesReportPage');
+const DebtsReportPage = lazyNamed(() => import('@/features/reports'), 'DebtsReportPage');
 
 const router = createBrowserRouter([
   {
@@ -65,6 +84,12 @@ const router = createBrowserRouter([
       { path: 'categories/:categoryId', element: <PublicProductsPage /> },
       { path: 'contact', element: <ContactPage /> },
       { path: 'request-quote', element: <RequestQuotePage /> },
+      { path: 'guides', element: <GuidesPage /> },
+      { path: 'guides/:slug', element: <GuideDetailPage /> },
+      { path: 'delivery', element: <ContentPage pageKey="delivery" /> },
+      { path: 'returns', element: <ContentPage pageKey="returns" /> },
+      { path: 'privacy', element: <ContentPage pageKey="privacy" /> },
+      { path: 'terms', element: <ContentPage pageKey="terms" /> },
     ],
   },
   {

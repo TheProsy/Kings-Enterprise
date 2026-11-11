@@ -146,6 +146,12 @@ export const ROUTES = {
   CATEGORY: '/categories/:categoryId',
   CONTACT: '/contact',
   REQUEST_QUOTE: '/request-quote',
+  GUIDES: '/guides',
+  GUIDE_DETAIL: '/guides/:slug',
+  DELIVERY: '/delivery',
+  RETURNS: '/returns',
+  PRIVACY: '/privacy',
+  TERMS: '/terms',
 
   // Auth
   LOGIN: '/login',

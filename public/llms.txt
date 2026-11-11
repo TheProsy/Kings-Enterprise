@@ -20,6 +20,11 @@
 - [About](https://www.blessedkingsenterprises.com.ng/about): Company background, values and service coverage.
 - [Contact](https://www.blessedkingsenterprises.com.ng/contact): Phone, WhatsApp, location and opening hours.
 - [Request a quote](https://www.blessedkingsenterprises.com.ng/request-quote): Send a material list for pricing and delivery planning.
+- [Guides](https://www.blessedkingsenterprises.com.ng/guides): Practical buying guides for cement, iron rods, quantity estimates, roofing, plumbing and delivery.
+- [Delivery and pickup](https://www.blessedkingsenterprises.com.ng/delivery): How depot pickup and site delivery work.
+- [Returns and damaged goods](https://www.blessedkingsenterprises.com.ng/returns): What to do if an item arrives damaged or incorrect.
+- [Privacy policy](https://www.blessedkingsenterprises.com.ng/privacy): How website enquiry information is handled.
+- [Terms of service](https://www.blessedkingsenterprises.com.ng/terms): Website and ordering terms.
 
 ## Product categories
 

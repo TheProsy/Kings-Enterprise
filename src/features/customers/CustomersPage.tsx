@@ -6,6 +6,7 @@ import { SearchInput } from '@/components/forms/SearchInput';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Modal } from '@/components/ui/Modal';
 import { DataTable } from '@/components/tables/DataTable';
+import { DeleteRecordButton } from '@/components/common/DeleteRecordButton';
 import { Badge } from '@/components/ui/Badge';
 import { BUSINESS_ID, customerService } from '@/services';
 import { PERMISSIONS, ROUTES, buildRoute } from '@/constants';
@@ -79,6 +80,11 @@ export function CustomersPage() {
       (customer.phone ? customer.phone.includes(search) : false),
   );
 
+  const removeCustomer = async (customer: Customer) => {
+    await customerService.remove(customer.id);
+    setCustomers((current) => current.filter((entry) => entry.id !== customer.id));
+  };
+
   const columns = [
     {
       key: 'name',
@@ -141,13 +147,22 @@ export function CustomersPage() {
       headerClassName: 'text-right',
       className: 'text-right',
       render: (c: Customer) => (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => navigate(buildRoute(ROUTES.APP_CUSTOMER_DETAIL, { customerId: c.id }))}
-        >
-          View Account
-        </Button>
+        <div className="flex items-center justify-end gap-1">
+          <DeleteRecordButton
+            entityLabel="Customer"
+            recordLabel={c.name}
+            description="Sales, receipts and payment history linked to this customer are kept."
+            showLabel={false}
+            onDelete={() => removeCustomer(c)}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(buildRoute(ROUTES.APP_CUSTOMER_DETAIL, { customerId: c.id }))}
+          >
+            View Account
+          </Button>
+        </div>
       ),
     },
   ];
@@ -234,7 +249,13 @@ export function CustomersPage() {
               </div>
             </div>
 
-            <div className="flex justify-end pt-1">
+            <div className="flex items-center justify-between pt-1">
+              <DeleteRecordButton
+                entityLabel="Customer"
+                recordLabel={c.name}
+                description="Sales, receipts and payment history linked to this customer are kept."
+                onDelete={() => removeCustomer(c)}
+              />
               <span className="text-xs font-semibold text-brand flex items-center">
                 View Account <ChevronRight className="h-3 w-3 ml-0.5" />
               </span>

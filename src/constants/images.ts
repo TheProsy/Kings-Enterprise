@@ -1,8 +1,10 @@
 export const BRAND_ASSETS = {
-  logo: '/logo.svg',
-  logoWhite: '/logo-white.svg',
-  logoIcon: '/logo-icon.svg',
-  favicon: '/favicon.svg',
+  logo: '/logo.png',
+  logoWhite: '/logo-white.png',
+  logoIcon: '/logo-icon.png',
+  logoStacked: '/logo-stacked.png',
+  logoStackedWhite: '/logo-stacked-white.png',
+  favicon: '/favicon.ico',
 } as const;
 
 export const PAGE_IMAGES = {

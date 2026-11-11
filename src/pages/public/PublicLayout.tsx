@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { path: ROUTES.HOME, label: 'Home' },
   { path: ROUTES.ABOUT, label: 'About' },
   { path: ROUTES.PRODUCTS, label: 'Products' },
+  { path: ROUTES.GUIDES, label: 'Guides' },
   { path: ROUTES.CONTACT, label: 'Contact' },
   { path: ROUTES.REQUEST_QUOTE, label: 'Request a Quote' },
 ];
@@ -40,7 +41,7 @@ export function PublicLayout() {
               <BrandLogo
                 variant={theme === 'dark' ? 'white' : 'full'}
                 size="md"
-                className="h-10 max-w-[210px] sm:max-w-[260px]"
+                className="h-12 max-w-[210px] sm:max-w-[260px]"
               />
             </NavLink>
 
@@ -158,13 +159,13 @@ export function PublicLayout() {
 
       <footer className="border-t border-border bg-surface text-text-secondary">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
             <div className="space-y-3">
               <NavLink to={ROUTES.HOME} className="inline-block">
                 <BrandLogo
                   variant={theme === 'dark' ? 'white' : 'full'}
                   size="sm"
-                  className="h-8 max-w-[200px]"
+                  className="h-10 max-w-[220px]"
                 />
               </NavLink>
               <p className="text-xs leading-relaxed text-text-secondary">
@@ -210,6 +211,39 @@ export function PublicLayout() {
                 <li>TMT High-Tensile Iron Rods</li>
                 <li>Hardwood Timber & Planks</li>
                 <li>Stone Dust & Sharp Sand</li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-text-primary">
+                Guides & Policies
+              </h4>
+              <ul className="space-y-2">
+                <li>
+                  <NavLink to={ROUTES.GUIDES} className="transition-colors hover:text-brand">
+                    Building Material Guides
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to={ROUTES.DELIVERY} className="transition-colors hover:text-brand">
+                    Delivery & Pickup
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to={ROUTES.RETURNS} className="transition-colors hover:text-brand">
+                    Returns & Damaged Goods
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to={ROUTES.PRIVACY} className="transition-colors hover:text-brand">
+                    Privacy Policy
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to={ROUTES.TERMS} className="transition-colors hover:text-brand">
+                    Terms of Service
+                  </NavLink>
+                </li>
               </ul>
             </div>
 

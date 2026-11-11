@@ -7,8 +7,9 @@ import { ProductCard } from '@/components/common/ProductCard';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Modal } from '@/components/ui/Modal';
+import { DeleteRecordButton } from '@/components/common/DeleteRecordButton';
 import { ProductForm } from '@/features/products/ProductForm';
-import { catalogueService, type CatalogueItem } from '@/services';
+import { catalogueService, productService, type CatalogueItem } from '@/services';
 import { toast } from '@/lib/toast';
 import { Pencil, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -202,6 +203,18 @@ export function ProductsPage() {
           size="md"
           footer={
             <div className="flex justify-end gap-2">
+              <DeleteRecordButton
+                entityLabel="Product"
+                recordLabel={selectedProduct.productName}
+                description="All of its variations and stock records are removed. Past sales keep their receipt history."
+                size="sm"
+                onDelete={async () => {
+                  await productService.remove(selectedProduct.productId);
+                  catalogueService.invalidate();
+                  setSelectedProduct(null);
+                  await loadData();
+                }}
+              />
               {canEdit && (
                 <Button
                   size="sm"

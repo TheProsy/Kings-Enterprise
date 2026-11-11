@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Modal } from '@/components/ui/Modal';
+import { DeleteRecordButton } from '@/components/common/DeleteRecordButton';
 import { Input, Select, Textarea } from '@/components/ui/Input';
 import { PanelSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -501,6 +502,15 @@ export function ReceiptDetailPage() {
                 <Copy className="h-3.5 w-3.5" />
                 Copy link
               </Button>
+              <DeleteRecordButton
+                entityLabel="Receipt"
+                recordLabel={receipt.receiptNumber}
+                description="Only this document is removed; the linked sale, payments and stock records are kept."
+                onDelete={async () => {
+                  await receiptService.remove(receipt.id);
+                  navigate(ROUTES.APP_RECEIPTS);
+                }}
+              />
             </div>
           </div>
 

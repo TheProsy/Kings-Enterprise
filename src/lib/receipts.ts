@@ -10,6 +10,7 @@ export const RECEIPT_TEMPLATE_VERSION = 1;
 
 export const DEFAULT_RECEIPT_SETTINGS: ReceiptSettings = {
   businessName: BUSINESS.name,
+  logoUrl: 'https://www.blessedkingsenterprises.com.ng/logo-icon.png',
   address: BUSINESS.address,
   phone: BUSINESS.phone,
   email: BUSINESS.email || undefined,
@@ -47,7 +48,10 @@ export function normalizeReceiptSettings(
       text(section.businessName) ||
       text(profile.name) ||
       DEFAULT_RECEIPT_SETTINGS.businessName,
-    logoUrl: text(section.logoUrl) || text(profile.logoUrl) || undefined,
+    logoUrl:
+      text(section.logoUrl) ||
+      text(profile.logoUrl) ||
+      DEFAULT_RECEIPT_SETTINGS.logoUrl,
     address:
       text(section.address) ||
       text(profile.address) ||

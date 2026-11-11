@@ -1,0 +1,138 @@
+{
+  "_default": {
+    "intro": "Browse the materials available at our Lokoja depot. Product availability and pricing change with supply, so confirm the current stock and rate with our sales desk before ordering.",
+    "buyingTips": [
+      "Confirm the exact size, unit and quantity before ordering.",
+      "Ask for the current price and availability at the time of purchase.",
+      "Check the condition of the materials before accepting delivery."
+    ],
+    "faqs": [
+      {
+        "question": "Can I buy in bulk?",
+        "answer": "Yes. Send your full material list and required quantities so we can confirm bulk availability, pricing and delivery."
+      },
+      {
+        "question": "How do I confirm the current price?",
+        "answer": "Call or WhatsApp +234 901 852 7535 with the product name and quantity. Prices change with stock and market conditions."
+      }
+    ]
+  },
+  "cement-building": {
+    "intro": "Cement, iron rods, timber, boards and adhesives form the backbone of most building projects. Our Lokoja depot stocks trusted brands and common sizes for foundations, blockwork, concrete, roofing and finishing. Confirm the grade or size required by your building professional before ordering.",
+    "buyingTips": [
+      "Confirm the cement strength class (32.5 or 42.5) required for the work.",
+      "Check that cement bags are dry, intact and free of hardened lumps.",
+      "Confirm iron rod diameter, length and unit price before cutting.",
+      "Store cement and timber in a dry, raised and well-ventilated area."
+    ],
+    "faqs": [
+      {
+        "question": "Do you sell Dangote and BUA cement?",
+        "answer": "We stock popular cement brands subject to availability. Confirm the brand and strength class you need with our sales desk."
+      },
+      {
+        "question": "Can I buy iron rods by length?",
+        "answer": "Yes, iron rods are sold by length or quantity depending on the product. Confirm the diameter, length and current rate before ordering."
+      },
+      {
+        "question": "How should I store cement after delivery?",
+        "answer": "Keep bags dry, raised off the floor and protected from rain. Use older stock first and avoid storing cement against damp walls."
+      }
+    ]
+  },
+  "nails-hardware": {
+    "intro": "Nails, binding wire, chains, padlocks, pliers and everyday hardware keep a site moving. We supply common sizes for formwork, roofing, fencing, carpentry and general repairs. Buy the correct type and length for the job, and confirm the unit before ordering bulk quantities.",
+    "buyingTips": [
+      "Choose the nail type for the material: common wire, concrete, roofing or finishing.",
+      "Confirm whether the price is per kilogram, pack or piece.",
+      "Check wire thickness and roll weight for binding wire.",
+      "Buy a little extra for wastage on large framing or fencing jobs."
+    ],
+    "faqs": [
+      {
+        "question": "What is the difference between common and concrete nails?",
+        "answer": "Common wire nails are used for timber and general carpentry. Hardened concrete nails are designed for fixing into masonry or concrete and require the correct technique."
+      },
+      {
+        "question": "Is binding wire sold by roll or weight?",
+        "answer": "Binding wire is commonly sold by roll, but confirm the roll weight and wire thickness with the sales desk."
+      }
+    ]
+  },
+  "painting": {
+    "intro": "Painting materials include rollers, brushes, trays, sandpaper and accessories for surface preparation and finishing. The right tools depend on the surface, paint type and finish you want. Confirm coverage and compatibility with your chosen paint before starting.",
+    "buyingTips": [
+      "Match the roller sleeve to the paint and surface texture.",
+      "Use a brush size that suits edges, corners and trim.",
+      "Prepare surfaces with sandpaper and clean cloths before painting.",
+      "Buy enough trays, liners and masking materials for the full job."
+    ],
+    "faqs": [
+      {
+        "question": "Which roller should I use for emulsion paint?",
+        "answer": "The roller sleeve depends on the surface and finish. Ask our sales desk for a recommendation based on the paint and wall texture."
+      },
+      {
+        "question": "Do you sell paintbrushes and rollers separately?",
+        "answer": "Yes, individual brushes, rollers, trays and kits are available subject to stock."
+      }
+    ]
+  },
+  "roofing-ceiling": {
+    "intro": "Roofing sheets, ceiling boards, ridges, flashing and fasteners need to work together as a system. Confirm the sheet profile, gauge, colour and accessories before ordering. For complex roofs, use a roof layout from your contractor to avoid costly cutting mistakes.",
+    "buyingTips": [
+      "Measure each roof plane, including overhangs and eaves.",
+      "Confirm sheet gauge, profile, length and coating.",
+      "Order ridges, flashing, screws and washers with the sheets.",
+      "Choose ceiling boards that suit the room's moisture and fire requirements."
+    ],
+    "faqs": [
+      {
+        "question": "Can I order cut-to-length roofing sheets?",
+        "answer": "Sheet lengths depend on the product and supplier arrangement. Confirm the available lengths and transport requirements before ordering."
+      },
+      {
+        "question": "Do you supply roofing accessories?",
+        "answer": "We stock common roofing accessories subject to availability. Share your roof layout so the required ridges, flashing and fasteners can be confirmed."
+      }
+    ]
+  },
+  "ropes-measuring": {
+    "intro": "Ropes, lines and measuring tapes are small items that make a big difference on site. Use the right tape length and rope strength for the task, and check measurements before cutting or setting out. Confirm the unit and price when buying in quantity.",
+    "buyingTips": [
+      "Choose a tape length that covers your longest measurement.",
+      "Check the tape's metric markings and lock mechanism.",
+      "Match rope strength to the load and application.",
+      "Store tapes and ropes clean and dry to extend their life."
+    ],
+    "faqs": [
+      {
+        "question": "What tape lengths are available?",
+        "answer": "Common tape lengths vary by stock. Tell us the maximum measurement you need so we can confirm a suitable option."
+      },
+      {
+        "question": "Do you sell measuring wheels?",
+        "answer": "Availability varies. Contact the sales desk with the type of measuring tool you need."
+      }
+    ]
+  },
+  "tools-equipment": {
+    "intro": "Hand tools and site equipment are essential for safe, efficient work. Our range includes common trowels, shovels, hammers, cutting tools and site accessories, subject to stock. Choose tools that match the job and inspect them before use.",
+    "buyingTips": [
+      "Choose the tool size and handle type for the task.",
+      "Check that handles and blades are secure before use.",
+      "Use the correct personal protective equipment on site.",
+      "Ask about availability before travelling for a specific tool."
+    ],
+    "faqs": [
+      {
+        "question": "Do you sell professional and DIY tools?",
+        "answer": "We stock a range of hand tools for trade and general use, subject to availability. Tell us the task so we can confirm the options."
+      },
+      {
+        "question": "Can I reserve a tool before pickup?",
+        "answer": "Call or WhatsApp to confirm availability and current pricing. Reservations depend on stock and the product."
+      }
+    ]
+  }
+}

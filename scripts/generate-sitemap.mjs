@@ -9,9 +9,10 @@ const FALLBACK_SITE_URL = 'https://www.blessedkingsenterprises.com.ng';
 
 function readSiteUrl() {
   try {
-    const source = readFileSync(join(rootDir, 'src', 'config', 'business.ts'), 'utf8');
-    const match = source.match(/website:\s*['"]([^'"]+)['"]/);
-    return match?.[1] || FALLBACK_SITE_URL;
+    const data = JSON.parse(
+      readFileSync(join(rootDir, 'src', 'content', 'business.json'), 'utf8'),
+    );
+    return typeof data.website === 'string' ? data.website : FALLBACK_SITE_URL;
   } catch {
     return FALLBACK_SITE_URL;
   }
@@ -36,7 +37,23 @@ const STATIC_ROUTES = [
   { path: '/about', changefreq: 'monthly', priority: '0.7' },
   { path: '/contact', changefreq: 'monthly', priority: '0.8' },
   { path: '/request-quote', changefreq: 'monthly', priority: '0.8' },
+  { path: '/guides', changefreq: 'weekly', priority: '0.8' },
+  { path: '/delivery', changefreq: 'monthly', priority: '0.6' },
+  { path: '/returns', changefreq: 'monthly', priority: '0.5' },
+  { path: '/privacy', changefreq: 'yearly', priority: '0.3' },
+  { path: '/terms', changefreq: 'yearly', priority: '0.3' },
 ];
+
+function readGuides() {
+  try {
+    const data = JSON.parse(
+      readFileSync(join(rootDir, 'src', 'content', 'guides.json'), 'utf8'),
+    );
+    return Array.isArray(data.guides) ? data.guides : [];
+  } catch {
+    return [];
+  }
+}
 
 function escapeXml(value) {
   return String(value).replace(
@@ -177,6 +194,18 @@ function buildSitemap(products, categories) {
       lastmod: TODAY,
       changefreq: route.changefreq,
       priority: route.priority,
+    });
+  }
+
+  for (const guide of readGuides()) {
+    const loc = `${SITE_URL}/guides/${encodeURIComponent(guide.slug)}`;
+    if (seen.has(loc)) continue;
+    seen.add(loc);
+    urls.push({
+      loc,
+      lastmod: toDate(guide.updated),
+      changefreq: 'monthly',
+      priority: '0.6',
     });
   }
 

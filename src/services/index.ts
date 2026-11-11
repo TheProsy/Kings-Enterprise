@@ -1,4 +1,5 @@
 import {
+  deleteDoc,
   doc,
   setDoc,
   getDoc,
@@ -13,6 +14,7 @@ import {
   limit,
   Timestamp,
   runTransaction,
+  writeBatch,
 } from 'firebase/firestore';
 import {
   EmailAuthProvider,
@@ -52,6 +54,39 @@ export type {
 } from '@/lib/receiptIssuing';
 
 const BUSINESS_ID = BUSINESS.id;
+
+const businessCollection = (name: string) =>
+  collection(db, `businesses/${BUSINESS_ID}/${name}`);
+
+const businessDoc = (path: string) => doc(db, `businesses/${BUSINESS_ID}/${path}`);
+
+const docsReferencing = async (collectionName: string, referenceId: string) =>
+  (
+    await getDocs(query(businessCollection(collectionName), where('referenceId', '==', referenceId)))
+  ).docs;
+
+/** Audits an owner deletion without blocking the deletion if the log write fails. */
+const recordDeletionAudit = async (
+  entityType: string,
+  entityId: string,
+  details: Record<string, unknown> = {},
+) => {
+  try {
+    const id = generateId();
+    await setDoc(businessDoc(`auditLogs/${id}`), {
+      id,
+      businessId: BUSINESS_ID,
+      userId: auth.currentUser?.uid ?? 'unknown',
+      action: `${entityType}.deleted`,
+      entityType,
+      entityId,
+      details,
+      createdAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Could not write deletion audit log:', error);
+  }
+};
 
 // Auth service
 export const authService = {
@@ -211,6 +246,10 @@ export const categoryService = {
   async deactivate(id: string) {
     await updateDoc(doc(db, `businesses/${BUSINESS_ID}/categories/${id}`), { active: false, updatedAt: serverTimestamp() });
   },
+  async remove(id: string) {
+    await deleteDoc(businessDoc(`categories/${id}`));
+    await recordDeletionAudit('category', id);
+  },
 };
 
 // Product service
@@ -237,6 +276,16 @@ export const productService = {
   },
   async deactivate(id: string) {
     await updateDoc(doc(db, `businesses/${BUSINESS_ID}/products/${id}`), { active: false, updatedAt: serverTimestamp() });
+  },
+  async remove(id: string) {
+    const variantsSnap = await getDocs(
+      collection(db, `businesses/${BUSINESS_ID}/products/${id}/variants`),
+    );
+    const batch = writeBatch(db);
+    variantsSnap.forEach((variantDoc) => batch.delete(variantDoc.ref));
+    batch.delete(businessDoc(`products/${id}`));
+    await batch.commit();
+    await recordDeletionAudit('product', id, { variants: variantsSnap.size });
   },
 };
 
@@ -275,6 +324,10 @@ export const customerService = {
   async update(id: string, data: Partial<Customer>) {
     await updateDoc(doc(db, `businesses/${BUSINESS_ID}/customers/${id}`), { ...data, updatedAt: serverTimestamp() });
   },
+  async remove(id: string) {
+    await deleteDoc(businessDoc(`customers/${id}`));
+    await recordDeletionAudit('customer', id);
+  },
 };
 
 // Supplier service
@@ -288,6 +341,10 @@ export const supplierService = {
     const id = generateId();
     await setDoc(doc(db, `businesses/${BUSINESS_ID}/suppliers/${id}`), { ...data, id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
     return id;
+  },
+  async remove(id: string) {
+    await deleteDoc(businessDoc(`suppliers/${id}`));
+    await recordDeletionAudit('supplier', id);
   },
 };
 
@@ -311,6 +368,95 @@ export const saleService = {
     await setDoc(doc(db, `businesses/${BUSINESS_ID}/sales/${id}`), { ...data, id, createdAt: serverTimestamp() });
     return id;
   },
+  /**
+   * Owner-only hard delete. Restocks every unit still held by the sale,
+   * reverses the customer ledger, and removes the linked receipts,
+   * payments and stock movements so no orphan records remain.
+   */
+  async remove(id: string) {
+    const saleRef = businessDoc(`sales/${id}`);
+    const receiptDocs = (
+      await getDocs(query(businessCollection('receipts'), where('saleId', '==', id)))
+    ).docs;
+    const paymentDocs = (await docsReferencing('payments', id)).filter(
+      (entry) => entry.data().referenceType === 'sale',
+    );
+    const movementDocs = (
+      await Promise.all(
+        [id, ...receiptDocs.map((entry) => entry.id)].map((referenceId) =>
+          docsReferencing('stockMovements', referenceId),
+        ),
+      )
+    ).flat();
+
+    await runTransaction(db, async (tx) => {
+      const saleSnap = await tx.get(saleRef);
+      if (!saleSnap.exists()) return;
+
+      const sale = saleSnap.data() as any;
+      const items: any[] = Array.isArray(sale.items) ? sale.items : [];
+      const returned: Record<string, number> = sale.returnedQuantities || {};
+      // Voided sales already restocked their items and reversed the customer
+      // ledger, so deleting them only removes the documents.
+      const wasVoided = sale.voided === true || sale.status === 'cancelled';
+      const variantRefs = items.map((item) =>
+        businessDoc(`products/${item.productId}/variants/${item.variantId}`),
+      );
+      const customerRef = sale.customerId
+        ? businessDoc(`customers/${sale.customerId}`)
+        : null;
+      const variantSnaps = await Promise.all(variantRefs.map((ref) => tx.get(ref)));
+      const customerSnap = customerRef ? await tx.get(customerRef) : null;
+      const now = serverTimestamp();
+
+      items.forEach((item, index) => {
+        const snap = variantSnaps[index];
+        if (!snap.exists()) return;
+        const returnedQuantity = Number(
+          returned[`${item.productId}:${item.variantId}`] ?? 0,
+        );
+        const restockQuantity = Math.max(
+          0,
+          Number(item.quantity ?? 0) - returnedQuantity,
+        );
+        if (restockQuantity === 0) return;
+        const currentQuantity = Number((snap.data() as any).quantityOnHand ?? 0);
+        tx.update(snap.ref, {
+          quantityOnHand: currentQuantity + restockQuantity,
+          updatedAt: now,
+        });
+      });
+
+      if (customerRef && customerSnap?.exists()) {
+        const customer = customerSnap.data() as any;
+        const netSaleTotal = Math.max(
+          0,
+          Number(sale.total ?? 0) - Number(sale.returnedTotalKobo ?? 0),
+        );
+        const totalPurchases = Math.max(
+          0,
+          Number(customer.totalPurchases ?? 0) - netSaleTotal,
+        );
+        const totalPaid = Math.max(
+          0,
+          Number(customer.totalPaid ?? 0) - Number(sale.amountPaid ?? 0),
+        );
+        tx.update(customerRef, {
+          totalPurchases,
+          totalPaid,
+          balanceDue: Math.max(0, totalPurchases - totalPaid),
+          updatedAt: now,
+        });
+      }
+
+      tx.delete(saleRef);
+      receiptDocs.forEach((entry) => tx.delete(entry.ref));
+      paymentDocs.forEach((entry) => tx.delete(entry.ref));
+      movementDocs.forEach((entry) => tx.delete(entry.ref));
+    });
+
+    await recordDeletionAudit('sale', id);
+  },
 };
 
 // Purchase service
@@ -328,6 +474,64 @@ export const purchaseService = {
     const id = generateId();
     await setDoc(doc(db, `businesses/${BUSINESS_ID}/purchases/${id}`), { ...data, id, createdAt: serverTimestamp() });
     return id;
+  },
+  /**
+   * Owner-only hard delete. Reverses the stock intake, reduces the supplier
+   * ledger, and removes the purchase's stock movements.
+   */
+  async remove(id: string) {
+    const purchaseRef = businessDoc(`purchases/${id}`);
+    const movementDocs = await docsReferencing('stockMovements', id);
+
+    await runTransaction(db, async (tx) => {
+      const purchaseSnap = await tx.get(purchaseRef);
+      if (!purchaseSnap.exists()) return;
+
+      const purchase = purchaseSnap.data() as any;
+      const items: any[] = Array.isArray(purchase.items) ? purchase.items : [];
+      const variantRefs = items.map((item) =>
+        businessDoc(`products/${item.productId}/variants/${item.variantId}`),
+      );
+      const supplierRef = purchase.supplierId
+        ? businessDoc(`suppliers/${purchase.supplierId}`)
+        : null;
+      const variantSnaps = await Promise.all(variantRefs.map((ref) => tx.get(ref)));
+      const supplierSnap = supplierRef ? await tx.get(supplierRef) : null;
+      const now = serverTimestamp();
+
+      items.forEach((item, index) => {
+        const snap = variantSnaps[index];
+        if (!snap.exists()) return;
+        const currentQuantity = Number((snap.data() as any).quantityOnHand ?? 0);
+        tx.update(snap.ref, {
+          quantityOnHand: Math.max(0, currentQuantity - Number(item.quantity ?? 0)),
+          updatedAt: now,
+        });
+      });
+
+      if (supplierRef && supplierSnap?.exists()) {
+        const supplier = supplierSnap.data() as any;
+        const totalPurchases = Math.max(
+          0,
+          Number(supplier.totalPurchases ?? 0) - Number(purchase.total ?? 0),
+        );
+        const totalPaid = Math.max(
+          0,
+          Number(supplier.totalPaid ?? 0) - Number(purchase.amountPaid ?? 0),
+        );
+        tx.update(supplierRef, {
+          totalPurchases,
+          totalPaid,
+          balanceDue: Math.max(0, totalPurchases - totalPaid),
+          updatedAt: now,
+        });
+      }
+
+      tx.delete(purchaseRef);
+      movementDocs.forEach((entry) => tx.delete(entry.ref));
+    });
+
+    await recordDeletionAudit('purchase', id);
   },
 };
 
@@ -350,6 +554,10 @@ export const expenseService = {
       createdAt: data.createdAt ? Timestamp.fromDate(data.createdAt) : serverTimestamp(),
     });
     return id;
+  },
+  async remove(id: string) {
+    await deleteDoc(businessDoc(`expenses/${id}`));
+    await recordDeletionAudit('expense', id);
   },
 };
 
@@ -684,6 +892,11 @@ export const receiptService = {
     return snap.exists() ? ({ id: snap.id, ...snap.data() } as Receipt) : null;
   },
 
+  async remove(receiptId: string) {
+    await deleteDoc(businessDoc(`receipts/${receiptId}`));
+    await recordDeletionAudit('receipt', receiptId);
+  },
+
   async recordPayment(input: RecordSalePaymentInput) {
     return recordSalePayment(input);
   },
@@ -726,6 +939,7 @@ export const auditService = {
 // Public catalogue: products joined with their variants
 export interface CatalogueItem extends ProductVariant {
   productName: string;
+  productDescription?: string;
   categoryId?: string;
   categoryName?: string;
   imageUrl?: string;
@@ -765,6 +979,7 @@ async function loadCatalogue(): Promise<CatalogueSnapshot> {
       {
         ...variant,
         productName: product.name,
+        productDescription: product.description,
         categoryId: product.categoryId,
         categoryName: product.categoryId
           ? categoryNames.get(product.categoryId)
@@ -778,6 +993,11 @@ async function loadCatalogue(): Promise<CatalogueSnapshot> {
 }
 
 export const catalogueService = {
+  /** Clears the short-lived catalogue cache after products/categories change. */
+  invalidate() {
+    catalogueCache = null;
+  },
+
   async list(): Promise<CatalogueSnapshot> {
     if (catalogueCache && catalogueCache.expiresAt > Date.now()) {
       return catalogueCache.snapshot;
