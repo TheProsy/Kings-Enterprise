@@ -15,9 +15,9 @@ const STATIC_ROUTES: Record<string, RouteSeo> = {
     description: DEFAULT_DESCRIPTION,
   },
   '/about': {
-    title: `About ${SITE_NAME} | Lokoja Building Materials Supplier`,
+    title: `About Blessed Kings Enterprises (Kings Building Materials) | Lokoja`,
     description:
-      'Learn about Kings Building Materials in Lokoja, Kogi State. Certified cement, TMT iron rods, roofing, timber and plumbing supplies backed by fair pricing and reliable site delivery.',
+      'Learn about Blessed Kings Enterprises, trading as Kings Building Materials in Lokoja, Kogi State. Certified cement, TMT iron rods, roofing, timber and plumbing supplies backed by fair pricing and reliable site delivery.',
   },
   '/products': {
     title: `Building Materials Catalogue & Prices in Lokoja | ${SITE_NAME}`,

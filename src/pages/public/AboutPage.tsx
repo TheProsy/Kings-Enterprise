@@ -96,8 +96,9 @@ export function AboutPage() {
               About {BUSINESS.name}
             </h1>
             <p className="mt-4 text-base leading-relaxed text-white/80 sm:text-lg">
-              Serving professional contractors, builders, and homeowners across Lokoja and Kogi
-              State with certified, premium-grade materials and dependable depot service.
+              Blessed Kings Enterprises, trading as Kings Building Materials, serves professional
+              contractors, builders, and homeowners across Lokoja and Kogi State with certified,
+              premium-grade materials and dependable depot service.
             </p>
           </div>
         </div>

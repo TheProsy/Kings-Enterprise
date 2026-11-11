@@ -16,7 +16,7 @@ interface HeroProps {
 
 export function Hero({
   title = 'Everything You Need to Build. All in One Place.',
-  subtitle = 'Wholesale and retail supplier of certified Dangote and BUA cement, high-tensile iron rods, hardwood timber, roofing sheets and plumbing supplies in Lokoja, Kogi State.',
+  subtitle = 'Blessed Kings Enterprises, trading as Kings Building Materials, is a wholesale and retail supplier of certified Dangote and BUA cement, high-tensile iron rods, hardwood timber, roofing sheets and plumbing supplies in Lokoja, Kogi State.',
   ctaLabel = 'Explore Materials',
   ctaHref = '/products',
   secondaryLabel = 'Request Wholesale Quote',
