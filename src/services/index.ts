@@ -410,6 +410,7 @@ export const saleService = {
       const now = serverTimestamp();
 
       items.forEach((item, index) => {
+        if (wasVoided) return;
         const snap = variantSnaps[index];
         if (!snap.exists()) return;
         const returnedQuantity = Number(
@@ -427,7 +428,7 @@ export const saleService = {
         });
       });
 
-      if (customerRef && customerSnap?.exists()) {
+      if (!wasVoided && customerRef && customerSnap?.exists()) {
         const customer = customerSnap.data() as any;
         const netSaleTotal = Math.max(
           0,
