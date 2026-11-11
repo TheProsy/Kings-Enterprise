@@ -177,7 +177,7 @@ export function HelpPage() {
         <p className="text-xs text-text-secondary mb-4 max-w-xl">
           For network setup, thermal Bluetooth printer pairing, user access recovery, or inventory audit questions, reach our operations support team:
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <div className="p-3 rounded-xl bg-surface border border-border shadow-xs flex items-center gap-3">
             <Phone className="h-4 w-4 text-brand" />
             <div>
@@ -185,13 +185,15 @@ export function HelpPage() {
               <p className="font-bold text-text-primary">{BUSINESS.phone}</p>
             </div>
           </div>
-          <div className="p-3 rounded-xl bg-surface border border-border shadow-xs flex items-center gap-3">
-            <Mail className="h-4 w-4 text-brand" />
-            <div>
-              <p className="text-text-muted text-3xs uppercase font-semibold">Store Email</p>
-              <p className="font-bold text-text-primary truncate">{BUSINESS.email}</p>
+          {BUSINESS.email && (
+            <div className="p-3 rounded-xl bg-surface border border-border shadow-xs flex items-center gap-3">
+              <Mail className="h-4 w-4 text-brand" />
+              <div>
+                <p className="text-text-muted text-3xs uppercase font-semibold">Store Email</p>
+                <p className="font-bold text-text-primary truncate">{BUSINESS.email}</p>
+              </div>
             </div>
-          </div>
+          )}
           <div className="p-3 rounded-xl bg-surface border border-border shadow-xs flex items-center gap-3">
             <MapPin className="h-4 w-4 text-brand" />
             <div>

@@ -228,13 +228,15 @@ export function PublicLayout() {
                 <Phone className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
                 <span>{BUSINESS.phone}</span>
               </a>
-              <a
-                href={`mailto:${BUSINESS.email}`}
-                className="flex items-center gap-2 transition-colors hover:text-brand"
-              >
-                <Mail className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-                <span>{BUSINESS.email}</span>
-              </a>
+              {BUSINESS.email && (
+                <a
+                  href={`mailto:${BUSINESS.email}`}
+                  className="flex items-center gap-2 transition-colors hover:text-brand"
+                >
+                  <Mail className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                  <span>{BUSINESS.email}</span>
+                </a>
+              )}
             </div>
           </div>
 

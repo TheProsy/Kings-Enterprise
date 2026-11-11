@@ -6,6 +6,7 @@ interface SectionHeaderProps {
   action?: React.ReactNode;
   className?: string;
   align?: 'left' | 'center';
+  as?: 'h1' | 'h2';
 }
 
 export function SectionHeader({
@@ -14,6 +15,7 @@ export function SectionHeader({
   action,
   className,
   align = 'left',
+  as: Heading = 'h2',
 }: SectionHeaderProps) {
   return (
     <div
@@ -24,7 +26,9 @@ export function SectionHeader({
       )}
     >
       <div className="max-w-2xl">
-        <h2 className="text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">{title}</h2>
+        <Heading className="text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">
+          {title}
+        </Heading>
         {description && (
           <p className="mt-2 text-sm leading-relaxed text-text-secondary">{description}</p>
         )}

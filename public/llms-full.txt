@@ -1,0 +1,104 @@
+# Kings Building Materials - full business profile
+
+Kings Building Materials is the trading name of Blessed Kings Enterprises, a building materials depot in Lokoja, Kogi State, Nigeria. The business supplies construction materials to contractors, engineers, developers, tradespeople and private homeowners, with wholesale and retail pricing.
+
+Website: https://www.blessedkingsenterprises.com.ng/
+Phone and WhatsApp: +234 901 852 7535
+Location: Lokoja, Kogi State, Nigeria
+Currency: Nigerian Naira (NGN)
+
+## Opening hours
+
+- Monday to Friday: 8:00 AM - 6:00 PM
+- Saturday: 8:00 AM - 4:00 PM
+- Sunday: Closed
+
+## What the business supplies
+
+Kings Building Materials stocks and supplies:
+
+- Cement and aggregates, including Dangote and BUA cement.
+- TMT high-tensile iron rods, steel bars, BRC mesh and binding wire.
+- Aluminium and stone-coated roofing sheets, PVC ceiling panels and roofing accessories.
+- Hardwood timber, marine plywood, boards and carpentry materials.
+- Plumbing pipes, fittings, water tanks and sanitary supplies.
+- Common wire nails, concrete nails, wire mesh and general hardware.
+- Emulsion, textured and weather-resistant paints, brushes and roller kits.
+- Hand tools, measuring tools and construction equipment.
+
+The live catalogue at https://www.blessedkingsenterprises.com.ng/products lists current products, variations, units, prices in NGN and stock availability. Product detail pages are available at /products/{product-id} and category pages at /categories/{category-id}.
+
+## How ordering works
+
+1. Browse the catalogue or send a material list.
+2. Request a quote through https://www.blessedkingsenterprises.com.ng/request-quote or contact the sales team by phone or WhatsApp.
+3. Confirm current pricing, stock, delivery location and timing.
+4. Complete the purchase in store, by bank transfer or through the agreed payment method.
+
+There is no online checkout or customer account on the public website. Website enquiries are received by the business for follow-up.
+
+## Delivery and service area
+
+The business serves Lokoja and surrounding communities in Kogi State. Site delivery is arranged directly with the sales team; availability, lead time and delivery cost depend on the material quantity, destination and vehicle requirements.
+
+## Pricing and availability
+
+Prices are shown in Nigerian Naira and are updated from the business inventory system. Building material prices can change daily because of supply and transport costs. Customers should confirm the final price, unit and availability by phone or WhatsApp before paying or travelling to the depot.
+
+## Trade accounts
+
+Registered recurring contractors can discuss structured supply arrangements and trade credit terms with the business. Approval, limits and repayment terms are agreed directly with management.
+
+## Contact and support
+
+- Phone and WhatsApp: +234 901 852 7535
+- Contact page: https://www.blessedkingsenterprises.com.ng/contact
+- Quote request: https://www.blessedkingsenterprises.com.ng/request-quote
+- Location: Lokoja, Kogi State, Nigeria
+
+No public email address, street address, map pin or social media profile is currently published. Use the phone or WhatsApp number for enquiries.
+
+## Public website structure
+
+- / - Home page with business overview, featured materials and categories.
+- /products - Full catalogue with search, category filters and current prices.
+- /products/{product-id} - Product details, variations, price and availability.
+- /categories/{category-id} - Products filtered to one category.
+- /about - Company background and service approach.
+- /contact - Contact details, location and opening hours.
+- /request-quote - Quote request form for material lists and delivery enquiries.
+- /app, /login, /forgot-password - Private staff management area; not public content.
+
+## Frequently asked questions
+
+### Where is Kings Building Materials located?
+
+The depot is in Lokoja, Kogi State, Nigeria. Contact the sales team for directions before visiting.
+
+### What are the opening hours?
+
+Monday to Friday, 8:00 AM to 6:00 PM; Saturday, 8:00 AM to 4:00 PM; closed on Sunday.
+
+### How do I get a price for a material list?
+
+Send the list through the quote request page or by WhatsApp. Include quantities, units, delivery location and required date for an accurate response.
+
+### Do you deliver to construction sites?
+
+Yes, site delivery can be arranged around Lokoja and Kogi State. Confirm availability and cost with the sales team.
+
+### Can I buy in bulk?
+
+Yes. The business serves both wholesale and retail customers and offers bulk pricing for contractors and developers.
+
+### Is there an online shop?
+
+No. The website is a catalogue and enquiry channel. Purchases are completed through the sales team or in store.
+
+### Does the business publish an email address?
+
+No public email address is currently listed. Use phone or WhatsApp for all enquiries.
+
+## Keywords and topics
+
+Building materials Lokoja, cement price Lokoja, Dangote cement Kogi, BUA cement, TMT iron rods Nigeria, roofing sheets Lokoja, hardwood timber Kogi, marine plywood, plumbing supplies Lokoja, construction tools Nigeria, wholesale building materials Kogi State.

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -10,18 +10,22 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { formatMoney } from '@/lib/formatters';
 import { catalogueService, type CatalogueItem } from '@/services';
-import { Package, FileText } from 'lucide-react';
+import { Package, FileText, ChevronRight } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { getProductImage } from '@/constants/images';
+import { SITE_NAME, SITE_URL } from '@/config/site';
+import { applyNoIndex, applySeo, removeJsonLd, setJsonLd } from '@/lib/seo';
 
 interface DisplayProduct {
   key: string;
+  productId?: string;
   name: string;
   category: string;
   price: number;
   unit: string;
   brand?: string;
   imageUrl?: string;
+  quantityOnHand?: number;
 }
 
 const FALLBACK_PRODUCTS: DisplayProduct[] = [
@@ -173,12 +177,19 @@ const FALLBACK_PRODUCTS: DisplayProduct[] = [
 
 export function ProductsPage() {
   const { productId, categoryId } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const categoryParam = searchParams.get('category') || '';
   const searchParam = searchParams.get('q') || '';
 
   const [items, setItems] = useState<CatalogueItem[]>([]);
-  const activeCategory = categoryParam || 'All';
+  const categoryRouteName = categoryId
+    ? items.find(
+        (item) =>
+          item.categoryId === categoryId || item.categoryName === categoryId,
+      )?.categoryName
+    : undefined;
+  const activeCategory = categoryParam || categoryRouteName || 'All';
   const [search, setSearch] = useState(searchParam);
   const [loading, setLoading] = useState(true);
 
@@ -204,13 +215,15 @@ export function ProductsPage() {
     if (loading) return [];
     if (items.length === 0) return FALLBACK_PRODUCTS;
     return items.map((item) => ({
-      key: item.id,
+      key: `${item.productId}:${item.id}`,
+      productId: item.productId,
       name: item.productName,
       category: item.categoryName || 'Building Materials',
       price: item.sellingPrice,
       unit: item.unit,
       brand: item.brand,
       imageUrl: item.imageUrl || getProductImage(item.productName, item.categoryName),
+      quantityOnHand: item.quantityOnHand,
     }));
   }, [items, loading]);
 
@@ -218,7 +231,8 @@ export function ProductsPage() {
     const next = new URLSearchParams(searchParams);
     if (category === 'All') next.delete('category');
     else next.set('category', category);
-    setSearchParams(next, { replace: true });
+    const query = next.toString();
+    navigate(`/products${query ? `?${query}` : ''}`, { replace: true });
   };
 
   const categories = useMemo(() => {
@@ -234,24 +248,216 @@ export function ProductsPage() {
       !term ||
       product.name.toLowerCase().includes(term) ||
       product.brand?.toLowerCase().includes(term);
-    const matchesProduct = !productId || product.key === productId;
+    const matchesProduct =
+      !productId || (product.productId || product.key) === productId;
     const matchesCategoryId =
       !categoryId ||
       items.some(
         (item) =>
-          item.id === product.key &&
+          item.productId === (product.productId || product.key) &&
           (item.categoryId === categoryId || item.categoryName === categoryId),
       );
     return matchesCategory && matchesSearch && matchesProduct && matchesCategoryId;
   });
 
+  useEffect(() => {
+    if (!productId || loading) return;
+    const variants = products.filter(
+      (item) => (item.productId || item.key) === productId,
+    );
+    const product = variants[0];
+    if (!product) {
+      applyNoIndex(
+        `Product Not Found | ${SITE_NAME}`,
+        'The requested product could not be found. Browse the full building materials catalogue for current prices and availability.',
+      );
+      return;
+    }
+
+    const productPath = `/products/${encodeURIComponent(productId)}`;
+    const prices = variants
+      .map((variant) => variant.price)
+      .filter((price) => Number.isFinite(price) && price > 0);
+    const minimumPrice =
+      prices.length > 0 ? Math.min(...prices) : product.price;
+    const description = `Buy ${product.name}${product.brand ? ` by ${product.brand}` : ''} in Lokoja from ${formatMoney(
+      minimumPrice,
+    )} per ${product.unit}. Check live stock at ${SITE_NAME} and order by phone or WhatsApp.`;
+    const imagePath = product.imageUrl || '/images/og/kings-building-materials.jpg';
+    const inStock = variants.some(
+      (variant) =>
+        variant.quantityOnHand === undefined || variant.quantityOnHand > 0,
+    );
+
+    applySeo({
+      title: `${product.name} | ${SITE_NAME}`,
+      description,
+      path: productPath,
+      type: 'product',
+      image: imagePath,
+      imageAlt: `${product.name} at ${SITE_NAME}, Lokoja`,
+    });
+
+    setJsonLd('product-schema', {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      url: `${SITE_URL}${productPath}`,
+      image: [imagePath.startsWith('http') ? imagePath : `${SITE_URL}${imagePath}`],
+      description,
+      sku: productId,
+      ...(product.brand ? { brand: { '@type': 'Brand', name: product.brand } } : {}),
+      category: product.category,
+      ...(prices.length > 0
+        ? {
+            offers: {
+              '@type': 'AggregateOffer',
+              url: `${SITE_URL}${productPath}`,
+              priceCurrency: 'NGN',
+              lowPrice: (Math.min(...prices) / 100).toFixed(2),
+              highPrice: (Math.max(...prices) / 100).toFixed(2),
+              offerCount: prices.length,
+              availability: inStock
+                ? 'https://schema.org/InStock'
+                : 'https://schema.org/OutOfStock',
+              seller: { '@type': 'Organization', name: SITE_NAME },
+            },
+          }
+        : {}),
+    });
+
+    setJsonLd('product-breadcrumb-schema', {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: `${SITE_URL}/`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Products',
+          item: `${SITE_URL}/products`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: product.name,
+          item: `${SITE_URL}${productPath}`,
+        },
+      ],
+    });
+
+    return () => {
+      removeJsonLd('product-schema');
+      removeJsonLd('product-breadcrumb-schema');
+    };
+  }, [productId, products, loading]);
+
+  useEffect(() => {
+    if (!categoryId) return;
+    const matched = items.find(
+      (item) => item.categoryId === categoryId || item.categoryName === categoryId,
+    );
+    let categoryName = matched?.categoryName;
+    if (!categoryName) {
+      try {
+        categoryName = decodeURIComponent(categoryId);
+      } catch {
+        categoryName = categoryId;
+      }
+      categoryName = categoryName
+        .replace(/[-_]+/g, ' ')
+        .replace(/\b\w/g, (character) => character.toUpperCase());
+    }
+
+    applySeo({
+      title: `${categoryName} in Lokoja | ${SITE_NAME}`,
+      description: `Browse ${categoryName.toLowerCase()} prices and availability at ${SITE_NAME} in Lokoja, Kogi State. Request a quote or order by phone and WhatsApp.`,
+      path: `/categories/${encodeURIComponent(categoryId)}`,
+    });
+
+    setJsonLd('category-breadcrumb-schema', {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: `${SITE_URL}/`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Products',
+          item: `${SITE_URL}/products`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: categoryName,
+          item: `${SITE_URL}/categories/${encodeURIComponent(categoryId)}`,
+        },
+      ],
+    });
+
+    return () => removeJsonLd('category-breadcrumb-schema');
+  }, [categoryId, items]);
+
+  const matchedProduct = productId
+    ? products.find(
+        (product) => (product.productId || product.key) === productId,
+      )
+    : undefined;
+  const categoryHeading = categoryId
+    ? items.find(
+        (item) =>
+          item.categoryId === categoryId || item.categoryName === categoryId,
+      )?.categoryName ||
+      categoryId
+        .replace(/[-_]+/g, ' ')
+        .replace(/\b\w/g, (character) => character.toUpperCase())
+    : undefined;
+  const pageHeading =
+    matchedProduct?.name ||
+    categoryHeading ||
+    'Building Materials Catalogue';
+  const pageDescription = matchedProduct
+    ? `Current depot pricing and availability for ${matchedProduct.name} in Lokoja, Kogi State.`
+    : categoryHeading
+      ? `Browse ${categoryHeading.toLowerCase()} prices and availability in Lokoja, Kogi State.`
+      : 'Browse verified wholesale and retail inventory available for immediate dispatch across Kogi State.';
+
   return (
     <div className="min-h-screen bg-canvas">
       <section className="border-b border-border bg-surface py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {(productId || categoryId) && (
+            <nav
+              aria-label="Breadcrumb"
+              className="mb-4 flex flex-wrap items-center gap-1.5 text-xs font-medium text-text-secondary"
+            >
+              <Link to="/" className="transition-colors hover:text-brand">
+                Home
+              </Link>
+              <ChevronRight className="h-3 w-3" aria-hidden="true" />
+              <Link to="/products" className="transition-colors hover:text-brand">
+                Products
+              </Link>
+              <ChevronRight className="h-3 w-3" aria-hidden="true" />
+              <span className="text-text-primary" aria-current="page">
+                {pageHeading}
+              </span>
+            </nav>
+          )}
           <SectionHeader
-            title="Building Materials Catalogue"
-            description="Browse verified wholesale and retail inventory available for immediate dispatch across Kogi State."
+            as="h1"
+            title={pageHeading}
+            description={pageDescription}
             action={
               <Button variant="primary" size="sm" asChild>
                 <Link to={ROUTES.REQUEST_QUOTE}>
@@ -302,11 +508,17 @@ export function ProductsPage() {
                   className="group flex flex-col overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="relative">
-                    <ProductImage
-                      src={product.imageUrl}
-                      alt={product.name}
-                      className="aspect-[4/3] w-full rounded-none"
-                    />
+                    <Link
+                      to={`/products/${encodeURIComponent(product.productId || product.key)}`}
+                      aria-label={`View ${product.name}`}
+                      className="block"
+                    >
+                      <ProductImage
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="aspect-[4/3] w-full rounded-none"
+                      />
+                    </Link>
                     <div className="absolute left-3 top-3">
                       <Badge variant="default" size="sm">
                         {product.category}
@@ -317,7 +529,11 @@ export function ProductsPage() {
                   <CardContent className="flex flex-1 flex-col justify-between p-5">
                     <div className="space-y-1">
                       <h3 className="line-clamp-2 text-base font-bold leading-snug text-text-primary transition-colors group-hover:text-brand">
-                        {product.name}
+                        <Link
+                          to={`/products/${encodeURIComponent(product.productId || product.key)}`}
+                        >
+                          {product.name}
+                        </Link>
                       </h3>
                       {product.brand && (
                         <p className="text-sm font-medium text-text-secondary">

@@ -261,8 +261,8 @@ export function AboutPage() {
             }
           />
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
-            {CONTACT_CARDS.map((card) => (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
+            {CONTACT_CARDS.filter((card) => card.body).map((card) => (
               <Card key={card.title} variant="soft">
                 <CardContent className="p-6 text-center">
                   <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-soft text-brand-fg">

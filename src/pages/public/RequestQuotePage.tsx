@@ -85,6 +85,7 @@ export function RequestQuotePage() {
       <section className="border-b border-border bg-surface py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeader
+            as="h1"
             title="Request a Material Quote"
             description="Submit your required materials list or bill of quantities for instant pricing, stock checks, and haulage estimates."
           />

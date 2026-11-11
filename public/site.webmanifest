@@ -1,0 +1,41 @@
+{
+  "name": "Kings Building Materials",
+  "short_name": "Kings Store",
+  "description": "Wholesale and retail building materials supplier in Lokoja, Kogi State, Nigeria. Cement, iron rods, roofing, timber, plumbing and tools.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#172B4D",
+  "lang": "en-NG",
+  "dir": "ltr",
+  "categories": ["shopping", "business", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

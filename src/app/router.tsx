@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { RootLayout } from '@/app/RootLayout';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PublicLayout } from '@/pages/public/PublicLayout';
 import { HomePage } from '@/pages/public/HomePage';
@@ -48,6 +49,10 @@ import { PERMISSIONS } from '@/constants';
 import { RequireSession, RequirePermission } from './guards';
 
 const router = createBrowserRouter([
+  {
+    element: <RootLayout />,
+    errorElement: <RouteErrorPage />,
+    children: [
   {
     path: '/',
     element: <PublicLayout />,
@@ -384,6 +389,8 @@ const router = createBrowserRouter([
     ],
   },
   { path: '*', element: <NotFoundPage />, errorElement: <RouteErrorPage /> },
+    ],
+  },
 ]);
 
 export { router };

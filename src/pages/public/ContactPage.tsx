@@ -85,6 +85,7 @@ export function ContactPage() {
       <section className="border-b border-border bg-surface py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeader
+            as="h1"
             title="Contact Our Store"
             description="Visit our warehouse depot in Lokoja or get in touch for immediate price checks and orders."
           />
@@ -122,7 +123,7 @@ export function ContactPage() {
                   </div>
 
                 <dl className="space-y-5">
-                  {DETAILS.map((detail) => (
+                  {DETAILS.filter((detail) => detail.value).map((detail) => (
                     <div key={detail.label} className="flex items-start gap-3.5">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-fg">
                         {detail.icon}

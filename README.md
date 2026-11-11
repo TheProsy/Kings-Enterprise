@@ -21,7 +21,7 @@ Designed for retail building material stores to operate friction-free without no
   - Available building materials catalogue with category filters and instant search.
   - Direct WhatsApp enquiry button with automated quote formatting.
   - Interactive customer inquiry form sending messages straight into the owner's dashboard.
-  - Physical yard location (Ganaja Road, Lokoja), opening hours, and contact numbers.
+  - Physical depot location in Lokoja, Kogi State, opening hours, and contact numbers.
 - **Private Management System:**
   - Fast 1-click switch between public website and management portal.
   - Strict role-based permissions (Business Owner, Salesperson, Storekeeper, Manager, Accountant).
@@ -107,6 +107,32 @@ Build for production:
 npm run build
 ```
 
+The build runs Vite and then `scripts/generate-sitemap.mjs`. The sitemap script reads the public products and categories from Firestore using the same `VITE_FIREBASE_*` environment variables, and falls back to the static routes in `public/sitemap.xml` when Firebase is unavailable or the variables are missing. The result is written to `dist/sitemap.xml`.
+
+---
+
+## 🔎 SEO and Discoverability
+
+The public website is configured for the production custom domain `https://www.blessedkingsenterprises.com.ng/`.
+
+- **Canonical URL and metadata:** `src/config/business.ts` defines the public website URL, which `src/config/site.ts` exposes as `SITE_URL` along with the default title, description and social image. Update the `website` value in `business.ts` if the domain ever changes; the build-time sitemap script reads the same value.
+- **Per-route metadata:** `src/components/seo/SeoManager.tsx` updates the title, description, canonical link, Open Graph and Twitter tags as visitors navigate. Product and category pages refine the metadata after Firestore data loads.
+- **Structured data:** `index.html` contains JSON-LD for the `HardwareStore` business, website and home page, including opening hours, service area and product categories. Product pages add `Product` and `Offer` JSON-LD at runtime.
+- **Sitemap:** `scripts/generate-sitemap.mjs` writes `dist/sitemap.xml` at build time with the static pages plus active products and categories from Firestore. `public/sitemap.xml` is a static fallback.
+- **Crawler files:** `public/robots.txt`, `public/llms.txt` and `public/llms-full.txt` describe the public business and catalogue for search engines and AI assistants.
+- **Private pages:** `/app`, `/login`, `/forgot-password`, `/unauthorized` and `/not-found` are marked `noindex` in the app and through `X-Robots-Tag` headers in `vercel.json`.
+- **Analytics and verification:** Google Analytics 4 (`G-KE3VLSLQN0`) is loaded from `public/analytics.js`; the Google Search Console verification tag is in `index.html`.
+- **Social preview:** `public/images/og/kings-building-materials.jpg` is a 1200x630 branded image used for Open Graph and Twitter cards.
+- **Contact details:** the public phone and WhatsApp number are defined in `src/config/business.ts`. The email field is intentionally empty, so email links are hidden across the website and receipts until a public address is configured.
+
+### After deploying
+
+1. Add `blessedkingsenterprises.com.ng` and `www.blessedkingsenterprises.com.ng` to the Vercel project and make the `www` hostname the primary domain.
+2. Create or claim the Google Business Profile for Kings Building Materials in Lokoja, set the category to building materials supplier, and add the phone number, opening hours, photos and website.
+3. Open Google Search Console, verify the domain (the verification meta tag is already in `index.html`), and submit `https://www.blessedkingsenterprises.com.ng/sitemap.xml`.
+4. Request indexing for the home page and `/products` after the first production deployment, then re-check the Pages report after a few days.
+5. Confirm `/robots.txt`, `/sitemap.xml`, `/llms.txt` and `/llms-full.txt` load on the production domain.
+
 ---
 
 ## ☁️ Deploying the Frontend to Vercel
@@ -142,6 +168,8 @@ Add every variable from `.env.example` under **Vercel → Project → Settings �
 | `VITE_FIREBASE_MEASUREMENT_ID` | Analytics measurement ID (optional) |
 
 `VITE_USE_FIREBASE_EMULATOR` must be unset or `false` on Vercel. All `VITE_*` values are compiled into the browser bundle at build time; the Firebase web API key is a public identifier and access control is enforced by `firestore.rules`.
+
+The sitemap build step also reads `VITE_FIREBASE_API_KEY` and `VITE_FIREBASE_PROJECT_ID` from the Vercel build environment. If they are unavailable, the build still succeeds and deploys the static sitemap fallback.
 
 ### 3. Allow the Vercel domain in Firebase
 

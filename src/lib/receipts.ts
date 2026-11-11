@@ -12,7 +12,7 @@ export const DEFAULT_RECEIPT_SETTINGS: ReceiptSettings = {
   businessName: BUSINESS.name,
   address: BUSINESS.address,
   phone: BUSINESS.phone,
-  email: BUSINESS.email,
+  email: BUSINESS.email || undefined,
   tagline: BUSINESS.tagline,
   footerMessage: 'Thank you for your patronage! Goods are checked at the point of sale.',
   primaryColor: '#172b4d',

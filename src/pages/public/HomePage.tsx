@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { Hero } from '@/components/ui/Hero';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { ProductImage } from '@/components/ui/ProductImage';
@@ -42,6 +42,7 @@ interface FeaturedItem {
   price: number;
   unit: string;
   imageUrl?: string;
+  href: string;
 }
 
 const FALLBACK_FEATURED: FeaturedItem[] = [
@@ -52,6 +53,7 @@ const FALLBACK_FEATURED: FeaturedItem[] = [
     price: 920000,
     unit: 'bag',
     imageUrl: '/images/products/dangote-cement.jpg',
+    href: ROUTES.PRODUCTS,
   },
   {
     key: 'f2',
@@ -60,6 +62,7 @@ const FALLBACK_FEATURED: FeaturedItem[] = [
     price: 850000,
     unit: 'length',
     imageUrl: '/images/products/tmt-iron-rods-12mm.jpg',
+    href: ROUTES.PRODUCTS,
   },
   {
     key: 'f3',
@@ -68,6 +71,7 @@ const FALLBACK_FEATURED: FeaturedItem[] = [
     price: 650000,
     unit: 'metre',
     imageUrl: '/images/products/roofing-sheet-longspan.jpg',
+    href: ROUTES.PRODUCTS,
   },
   {
     key: 'f4',
@@ -76,10 +80,16 @@ const FALLBACK_FEATURED: FeaturedItem[] = [
     price: 1650000,
     unit: 'sheet',
     imageUrl: '/images/products/marine-plywood-18mm.jpg',
+    href: ROUTES.PRODUCTS,
   },
 ];
 
-const FALLBACK_CATEGORIES = [
+const FALLBACK_CATEGORIES: Array<{
+  id?: string;
+  name: string;
+  count: number;
+  image?: string;
+}> = [
   { name: 'Cement & Aggregates', count: 14, image: '/images/categories/cement.jpg' },
   { name: 'TMT Iron Rods & Steel', count: 18, image: '/images/categories/steel.jpg' },
   { name: 'Hardwood Timber & Boards', count: 12, image: '/images/categories/timber.jpg' },
@@ -90,7 +100,9 @@ const FALLBACK_CATEGORIES = [
 
 export function HomePage() {
   const [items, setItems] = useState<CatalogueItem[]>([]);
-  const [categories, setCategories] = useState<Array<{ name: string; count: number; image?: string }>>([]);
+  const [categories, setCategories] = useState<
+    Array<{ id?: string; name: string; count: number; image?: string }>
+  >([]);
 
   useEffect(() => {
     let active = true;
@@ -108,6 +120,7 @@ export function HomePage() {
         setCategories(
           catalogueCategories
             .map((category) => ({
+              id: category.id,
               name: category.name,
               count: counts.get(category.name) || 0,
               image: getCategoryImage(category.name),
@@ -126,12 +139,13 @@ export function HomePage() {
   const featured = useMemo<FeaturedItem[]>(() => {
     if (items.length === 0) return FALLBACK_FEATURED;
     return items.slice(0, 4).map((item) => ({
-      key: item.id,
+      key: `${item.productId}:${item.id}`,
       name: item.productName,
       category: item.categoryName || 'Building Materials',
       price: item.sellingPrice,
       unit: item.unit,
       imageUrl: item.imageUrl || getProductImage(item.productName, item.categoryName),
+      href: `/products/${encodeURIComponent(item.productId)}`,
     }));
   }, [items]);
 
@@ -200,7 +214,11 @@ export function HomePage() {
               {categoryTiles.map((category) => (
                 <NavLink
                   key={category.name}
-                  to={`${ROUTES.PRODUCTS}?category=${encodeURIComponent(category.name)}`}
+                  to={
+                    category.id
+                      ? `/categories/${encodeURIComponent(category.id)}`
+                      : `${ROUTES.PRODUCTS}?category=${encodeURIComponent(category.name)}`
+                  }
                   className="group relative flex min-h-[130px] flex-col justify-end overflow-hidden rounded-xl border border-white/15 bg-brand-950 p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-300/80 hover:shadow-xl"
                 >
                   <img
@@ -254,11 +272,17 @@ export function HomePage() {
                 className="flex flex-col overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className="relative">
-                  <ProductImage
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="aspect-[4/3] w-full rounded-none"
-                  />
+                  <Link
+                    to={product.href}
+                    aria-label={`View ${product.name}`}
+                    className="block"
+                  >
+                    <ProductImage
+                      src={product.imageUrl}
+                      alt={product.name}
+                      className="aspect-[4/3] w-full rounded-none"
+                    />
+                  </Link>
                   <div className="absolute left-3 top-3">
                     <Badge variant="default" size="sm">
                       {product.category}
@@ -269,7 +293,9 @@ export function HomePage() {
                 <CardContent className="flex flex-1 flex-col justify-between p-5">
                   <div>
                     <h3 className="line-clamp-2 text-base font-bold leading-snug text-text-primary">
-                      {product.name}
+                      <Link to={product.href}>
+                        {product.name}
+                      </Link>
                     </h3>
                     <p className="mt-1 text-xs text-text-muted">Sold per {product.unit}</p>
                   </div>
