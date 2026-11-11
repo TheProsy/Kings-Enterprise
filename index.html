@@ -45,12 +45,16 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link
-      rel="preload"
-      as="image"
-      href="/images/hero/depot-hero.jpg"
-      fetchpriority="high"
-    />
+    <script>
+      if (window.location.pathname === '/') {
+        var heroPreload = document.createElement('link');
+        heroPreload.rel = 'preload';
+        heroPreload.as = 'image';
+        heroPreload.href = '/images/hero/depot-hero.jpg';
+        heroPreload.setAttribute('fetchpriority', 'high');
+        document.head.appendChild(heroPreload);
+      }
+    </script>
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Kings Building Materials" />
@@ -266,11 +270,16 @@
       })();
     </script>
 
-    <script
-      async
-      src="https://www.googletagmanager.com/gtag/js?id=G-KE3VLSLQN0"
-    ></script>
     <script src="/analytics.js"></script>
+    <script>
+      window.addEventListener('load', function () {
+        var gtagScript = document.createElement('script');
+        gtagScript.async = true;
+        gtagScript.src =
+          'https://www.googletagmanager.com/gtag/js?id=G-KE3VLSLQN0';
+        document.head.appendChild(gtagScript);
+      });
+    </script>
   </head>
   <body class="min-h-screen">
     <div id="root"></div>

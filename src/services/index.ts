@@ -731,45 +731,75 @@ export interface CatalogueItem extends ProductVariant {
   imageUrl?: string;
 }
 
+interface CatalogueSnapshot {
+  products: Product[];
+  categories: Category[];
+  items: CatalogueItem[];
+}
+
+const CATALOGUE_CACHE_MS = 60_000;
+let catalogueCache: { snapshot: CatalogueSnapshot; expiresAt: number } | null = null;
+let catalogueRequest: Promise<CatalogueSnapshot> | null = null;
+
+async function loadCatalogue(): Promise<CatalogueSnapshot> {
+  const [products, categories, variantsSnapshot] = await Promise.all([
+    productService.list(),
+    categoryService.list(),
+    getDocs(collectionGroup(db, 'variants')),
+  ]);
+  const categoryNames = new Map(categories.map((c) => [c.id, c.name]));
+  const productsById = new Map(products.map((product) => [product.id, product]));
+
+  const variants = variantsSnapshot.docs
+    .map((entry) => ({ id: entry.id, ...entry.data() } as ProductVariant))
+    .filter(
+      (variant) =>
+        variant.businessId === BUSINESS_ID && variant.active === true,
+    );
+
+  const items = variants.flatMap((variant) => {
+    const product = productsById.get(variant.productId);
+    if (!product) return [];
+
+    return [
+      {
+        ...variant,
+        productName: product.name,
+        categoryId: product.categoryId,
+        categoryName: product.categoryId
+          ? categoryNames.get(product.categoryId)
+          : undefined,
+        imageUrl: product.imageUrl,
+      } as CatalogueItem,
+    ];
+  });
+
+  return { products, categories, items };
+}
+
 export const catalogueService = {
-  async list() {
-    const [products, categories, variantsSnapshot] = await Promise.all([
-      productService.list(),
-      categoryService.list(),
-      getDocs(collectionGroup(db, 'variants')),
-    ]);
-    const categoryNames = new Map(categories.map((c) => [c.id, c.name]));
-    const productsById = new Map(products.map((product) => [product.id, product]));
+  async list(): Promise<CatalogueSnapshot> {
+    if (catalogueCache && catalogueCache.expiresAt > Date.now()) {
+      return catalogueCache.snapshot;
+    }
 
-    const variants = variantsSnapshot.docs
-      .map((entry) => ({ id: entry.id, ...entry.data() } as ProductVariant))
-      .filter(
-        (variant) =>
-          variant.businessId === BUSINESS_ID && variant.active === true,
-      );
+    if (!catalogueRequest) {
+      catalogueRequest = loadCatalogue().finally(() => {
+        catalogueRequest = null;
+      });
+    }
 
-    const items = variants.flatMap((variant) => {
-      const product = productsById.get(variant.productId);
-      if (!product) return [];
-
-      return [
-        {
-          ...variant,
-          productName: product.name,
-          categoryId: product.categoryId,
-          categoryName: product.categoryId
-            ? categoryNames.get(product.categoryId)
-            : undefined,
-          imageUrl: product.imageUrl,
-        } as CatalogueItem,
-      ];
-    });
-
-    return {
-      products,
-      categories,
-      items,
-    };
+    try {
+      const snapshot = await catalogueRequest;
+      catalogueCache = {
+        snapshot,
+        expiresAt: Date.now() + CATALOGUE_CACHE_MS,
+      };
+      return snapshot;
+    } catch (error) {
+      if (catalogueCache) return catalogueCache.snapshot;
+      throw error;
+    }
   },
 };
 
