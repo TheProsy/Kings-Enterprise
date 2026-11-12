@@ -726,7 +726,7 @@ export function SalesPage() {
   return (
     <div className="space-y-5 pb-24 lg:pb-0">
       <PageHeader
-        title="New Sale"
+        title="New Sale (POS)"
         description="Search products, add them to the cart, and take payment. Stock and receipts update automatically."
         action={
           <div className="flex items-center gap-2">

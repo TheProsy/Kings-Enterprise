@@ -89,7 +89,10 @@ export function SettingsPage() {
         if (data.inventory) setInventory({ ...DEFAULT_INVENTORY, ...data.inventory });
         if (data.payments) setPayments({ ...DEFAULT_PAYMENTS, ...data.payments });
       })
-      .catch((error) => console.error(error))
+      .catch((error) => {
+        console.error(error);
+        toast('Could not load settings.', 'error');
+      })
       .finally(() => {
         if (active) setLoading(false);
       });
@@ -150,7 +153,7 @@ export function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Settings & Preferences"
+        title="Settings"
         description="Configure store profile, thermal receipt formatting, and operational rules."
         action={
           <Button variant="outline" size="sm" asChild>
@@ -167,8 +170,11 @@ export function SettingsPage() {
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Settings Navigation Tabs (4 cols) */}
-        <div className="lg:col-span-4 space-y-1">
-          <Card variant="soft" className="p-2 shadow-sm">
+        <div className="lg:col-span-4">
+          <Card
+            variant="soft"
+            className="flex gap-2 overflow-x-auto no-scrollbar p-2 shadow-sm lg:flex-col lg:gap-0.5 lg:overflow-visible"
+          >
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isSelected = activeTab === tab.id;
@@ -177,14 +183,14 @@ export function SettingsPage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    'w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all text-left btn-press select-none',
+                    'flex w-auto shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-all btn-press select-none lg:w-full lg:gap-3 lg:px-3.5 lg:py-3',
                     isSelected
                       ? 'bg-brand text-white shadow-xs'
                       : 'text-text-secondary hover:text-text-primary hover:bg-surface-3',
                   )}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span>{tab.label}</span>
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="whitespace-nowrap lg:whitespace-normal">{tab.label}</span>
                 </button>
               );
             })}
@@ -195,7 +201,7 @@ export function SettingsPage() {
         <div className="lg:col-span-8">
           {/* Tab 1: Business Profile */}
           {activeTab === 'business' && (
-            <Card variant="soft" className="p-6 shadow-sm space-y-5">
+            <Card variant="soft" className="p-4 sm:p-6 shadow-sm space-y-5">
               <CardHeader className="p-0 pb-3 border-b border-border/60">
                 <CardTitle className="text-base font-bold text-text-primary">
                   Store Business Profile
@@ -240,7 +246,7 @@ export function SettingsPage() {
 
           {/* Tab 2: Receipt Template */}
           {activeTab === 'receipt' && (
-            <Card variant="soft" className="p-6 shadow-sm space-y-5">
+            <Card variant="soft" className="p-4 sm:p-6 shadow-sm space-y-5">
               <CardHeader className="p-0 pb-3 border-b border-border/60">
                 <CardTitle className="text-base font-bold text-text-primary">
                   Receipt Branding & Documents
@@ -456,7 +462,7 @@ export function SettingsPage() {
 
           {/* Tab 3: Inventory Rules */}
           {activeTab === 'inventory' && (
-            <Card variant="soft" className="p-6 shadow-sm space-y-5">
+            <Card variant="soft" className="p-4 sm:p-6 shadow-sm space-y-5">
               <CardHeader className="p-0 pb-3 border-b border-border/60">
                 <CardTitle className="text-base font-bold text-text-primary">
                   Stock Alerts
@@ -499,7 +505,7 @@ export function SettingsPage() {
 
           {/* Tab 4: Accepted Payments */}
           {activeTab === 'payments' && (
-            <Card variant="soft" className="p-6 shadow-sm space-y-5">
+            <Card variant="soft" className="p-4 sm:p-6 shadow-sm space-y-5">
               <CardHeader className="p-0 pb-3 border-b border-border/60">
                 <CardTitle className="text-base font-bold text-text-primary">
                   Payment Channels
@@ -573,7 +579,7 @@ export function SettingsPage() {
 
           {/* Tab 5: Appearance */}
           {activeTab === 'appearance' && (
-            <Card variant="soft" className="p-6 shadow-sm space-y-5">
+            <Card variant="soft" className="p-4 sm:p-6 shadow-sm space-y-5">
               <CardHeader className="p-0 pb-3 border-b border-border/60">
                 <CardTitle className="text-base font-bold text-text-primary">
                   Theme & Visual System
@@ -618,7 +624,7 @@ export function SettingsPage() {
 
           {/* Tab 6: Security */}
           {activeTab === 'security' && (
-            <Card variant="soft" className="p-6 shadow-sm space-y-5">
+            <Card variant="soft" className="p-4 sm:p-6 shadow-sm space-y-5">
               <CardHeader className="p-0 pb-3 border-b border-border/60">
                 <CardTitle className="text-base font-bold text-text-primary">
                   Password & Account Security

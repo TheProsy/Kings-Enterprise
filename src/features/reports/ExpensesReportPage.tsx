@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { DataTable, type Column } from '@/components/tables/DataTable';
 import { expenseService } from '@/services';
 import { formatMoney, formatDate } from '@/lib/formatters';
+import { toast } from '@/lib/toast';
 import type { Expense } from '@/types';
 import { Receipt, FolderTree, FileSpreadsheet, Printer, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -29,6 +30,7 @@ export function ExpensesReportPage() {
       setTotal(data.reduce((sum, e) => sum + (e.amount || 0), 0));
     } catch (err) {
       console.error('Failed to load expenses report:', err);
+      toast('Could not load the expenses report.', 'error');
     } finally {
       setLoading(false);
     }
@@ -95,28 +97,28 @@ export function ExpensesReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <PageHeader
-          title="Operating Expenses Report"
-          description="Analysis of overhead expenditures categorized by utility, operations, salaries, and maintenance."
-          breadcrumbs={[
-            { label: 'Reports', href: ROUTES.APP_REPORTS },
-            { label: 'Expenses Report' },
-          ]}
-        />
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <Button variant="secondary" size="sm" asChild>
-            <Link to={ROUTES.APP_REPORTS}>
-              <ArrowLeft className="w-4 h-4 mr-1.5" />
-              All Reports
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
-            <Printer className="w-4 h-4 mr-1.5" />
-            Print Report
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Expenses Report"
+        description="Analysis of overhead expenditures categorized by utility, operations, salaries, and maintenance."
+        breadcrumbs={[
+          { label: 'Reports', href: ROUTES.APP_REPORTS },
+          { label: 'Expenses Report' },
+        ]}
+        action={
+          <>
+            <Button variant="secondary" size="sm" asChild>
+              <Link to={ROUTES.APP_REPORTS}>
+                <ArrowLeft className="w-4 h-4 mr-1.5" />
+                All Reports
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Printer className="w-4 h-4 mr-1.5" />
+              Print Report
+            </Button>
+          </>
+        }
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -125,18 +127,21 @@ export function ExpensesReportPage() {
           value={formatMoney(total)}
           icon={<Receipt className="w-5 h-5" />}
           description="Cumulative overhead spending"
+          tone="danger"
         />
         <StatCard
           label="Total Payment Entries"
           value={expenses.length.toString()}
           icon={<FileSpreadsheet className="w-5 h-5" />}
           description="Logged expense transactions"
+          tone="brand"
         />
         <StatCard
           label="Expense Categories"
           value={byCategory.length.toString()}
           icon={<FolderTree className="w-5 h-5" />}
           description="Cost distribution centers"
+          tone="neutral"
         />
       </div>
 
@@ -153,10 +158,10 @@ export function ExpensesReportPage() {
           mobileCardRender={(cat) => {
             const pct = total > 0 ? (cat.total / total) * 100 : 0;
             return (
-              <div className="p-4 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-text-primary capitalize">{cat.category}</h4>
-                  <span className="font-bold text-text-primary">{formatMoney(cat.total)}</span>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="min-w-0 truncate font-bold capitalize text-text-primary">{cat.category}</h4>
+                  <span className="shrink-0 font-bold text-text-primary">{formatMoney(cat.total)}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-text-secondary">
                   <span>{cat.count} entries</span>
@@ -169,7 +174,7 @@ export function ExpensesReportPage() {
       </div>
 
       {/* Recent Expense Entries */}
-      <Card variant="soft">
+      <Card variant="soft" className="p-5">
         <CardHeader>
           <CardTitle>Recent 10 Expenses</CardTitle>
         </CardHeader>
@@ -177,14 +182,14 @@ export function ExpensesReportPage() {
           {expenses.length > 0 ? (
             <div className="divide-y divide-border/60">
               {expenses.slice(0, 10).map((e) => (
-                <div key={e.id} className="py-3 flex items-center justify-between text-sm">
-                  <div>
-                    <p className="font-semibold text-text-primary">{e.description || e.category}</p>
-                    <p className="text-xs text-text-secondary capitalize">
+                <div key={e.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-text-primary">{e.description || e.category}</p>
+                    <p className="truncate text-xs capitalize text-text-secondary">
                       {e.category} · {formatDate(e.createdAt)}
                     </p>
                   </div>
-                  <span className="font-bold text-danger">-{formatMoney(e.amount)}</span>
+                  <span className="shrink-0 font-bold text-danger">-{formatMoney(e.amount)}</span>
                 </div>
               ))}
             </div>

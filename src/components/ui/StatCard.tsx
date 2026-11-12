@@ -75,7 +75,7 @@ export function StatCard({
           <p className="truncate text-xs font-semibold uppercase tracking-wide text-text-secondary">
             {label}
           </p>
-          <p className={cn('mt-2 text-2xl font-bold tabular-nums tracking-tight', palette.value)}>
+          <p className={cn('mt-2 break-words text-xl font-bold tabular-nums tracking-tight sm:text-2xl', palette.value)}>
             {value}
           </p>
           {trend && (

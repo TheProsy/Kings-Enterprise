@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, NavLink } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select, Textarea } from '@/components/ui/Input';
@@ -60,16 +60,15 @@ export function NewExpensePage() {
   return (
     <div className="max-w-2xl space-y-6">
       <PageHeader
-        title="Record Business Expense"
+        title="Record Expense"
         description="Log operational costs, logistics, driver fees, or store supplies."
-        breadcrumb={
-          <NavLink to={ROUTES.APP_EXPENSES} className="hover:underline">
-            ← Back to Expenses
-          </NavLink>
-        }
+        breadcrumbs={[
+          { label: 'Expenses', href: ROUTES.APP_EXPENSES },
+          { label: 'Record Expense' },
+        ]}
       />
 
-      <Card variant="soft" className="p-6 shadow-sm">
+      <Card variant="soft" className="p-4 shadow-sm sm:p-6">
         <form onSubmit={handleSubmit} className="space-y-5">
           <Textarea
             label="Description *"
@@ -99,7 +98,7 @@ export function NewExpensePage() {
             <label className="text-xs font-semibold text-text-primary block uppercase tracking-wider">
               Payment Method *
             </label>
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 gap-2.5 min-[380px]:grid-cols-3">
               {PAYMENT_METHODS.map((m) => {
                 const isSelected = paymentMethod === m.value;
                 const Icon = m.icon;

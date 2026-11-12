@@ -152,7 +152,7 @@ export function StockHistoryPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Stock Movement History"
+        title="Stock History"
         description="Every stock change, in and out. Only the store owner can delete a history entry."
       />
 

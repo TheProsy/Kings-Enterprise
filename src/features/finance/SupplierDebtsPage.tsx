@@ -10,7 +10,7 @@ import { formatMoney } from '@/lib/formatters';
 import { ROUTES, buildRoute } from '@/constants';
 import { toast } from '@/lib/toast';
 import type { Supplier } from '@/types';
-import { Building2 } from 'lucide-react';
+import { AlertCircle, Building2, Users } from 'lucide-react';
 
 export function SupplierDebtsPage() {
   const navigate = useNavigate();
@@ -107,22 +107,44 @@ export function SupplierDebtsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Supplier Debts & Payables"
+        title="Supplier Debts"
         description="Monitor outstanding vendor obligations, invoices, and payment schedules."
+        breadcrumbs={[
+          { label: 'Money & Finance', href: ROUTES.APP_FINANCE },
+          { label: 'Supplier Debts' },
+        ]}
+        action={
+          <Button
+            variant="secondary"
+            onClick={() => navigate(ROUTES.APP_FINANCE_CUSTOMER_DEBTS)}
+          >
+            <Users className="mr-1.5 h-4 w-4" />
+            Customer Debts
+          </Button>
+        }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
-          label="Total Unpaid Supplier Invoices"
+          label="Total Supplier Debt"
           value={formatMoney(total)}
-          subtitle="Total payable obligation across all suppliers"
-          icon={<Building2 className="h-5 w-5 text-danger-fg" />}
+          subtitle="Payable obligation across all suppliers"
+          icon={<Building2 className="h-5 w-5" />}
+          tone="danger"
         />
         <StatCard
           label="Creditor Suppliers"
           value={suppliers.length}
           subtitle="Suppliers with outstanding balances"
-          icon={<Building2 className="h-5 w-5 text-brand" />}
+          icon={<Building2 className="h-5 w-5" />}
+          tone="brand"
+        />
+        <StatCard
+          label="Average Payable"
+          value={formatMoney(suppliers.length > 0 ? total / suppliers.length : 0)}
+          subtitle="Mean amount owed per supplier"
+          icon={<AlertCircle className="h-5 w-5" />}
+          tone="neutral"
         />
       </div>
 
@@ -130,21 +152,27 @@ export function SupplierDebtsPage() {
         columns={columns}
         data={suppliers}
         loading={loading}
+        searchPlaceholder="Search suppliers by name or phone..."
         emptyTitle="All supplier invoices settled!"
         emptyMessage="There are currently no unpaid supplier balances on record."
         onRowClick={(s) => navigate(buildRoute(ROUTES.APP_SUPPLIER_DETAIL, { supplierId: s.id }))}
         mobileCardRender={(s) => (
           <div className="space-y-2">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-bold text-sm text-text-primary">{s.name}</p>
-                {s.phone && <p className="text-xs text-text-muted">{s.phone}</p>}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-text-primary">{s.name}</p>
+                {s.phone && <p className="truncate text-xs text-text-muted">{s.phone}</p>}
               </div>
               <Badge variant="danger">Payable</Badge>
             </div>
-            <div className="flex items-center justify-between pt-1 border-t border-border/60 text-xs">
-              <span className="text-text-muted">Balance We Owe:</span>
-              <span className="font-bold text-sm text-danger-fg">{formatMoney(s.balanceDue || 0)}</span>
+            <div className="flex items-center justify-between border-t border-border/60 pt-2 text-xs">
+              <span className="text-text-muted">Balance we owe</span>
+              <span className="text-sm font-bold tabular-nums text-danger-fg">
+                {formatMoney(s.balanceDue || 0)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-text-muted">
+              <span>Invoiced {formatMoney(s.totalPurchases || 0)}</span>
             </div>
           </div>
         )}

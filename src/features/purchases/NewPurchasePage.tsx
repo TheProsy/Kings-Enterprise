@@ -244,7 +244,7 @@ export function NewPurchasePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Receive New Purchase"
+        title="Receive Stock"
         description="Record delivered inventory from suppliers, update unit costs, and adjust supplier payables."
         action={
           <Button variant="outline" size="sm" asChild>

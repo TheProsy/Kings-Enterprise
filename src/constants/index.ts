@@ -6,6 +6,12 @@ export const ROLES = {
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
+export const ROLE_LABELS: Record<Role, string> = {
+  owner: 'Store Owner',
+  salesperson: 'Salesperson',
+  stock_manager: 'Stock Manager',
+};
+
 export const PERMISSIONS = {
   // Products
   PRODUCTS_VIEW: 'products:view',
@@ -66,6 +72,44 @@ export const PERMISSIONS = {
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+
+export const PERMISSION_LABELS: Record<Permission, string> = {
+  'products:view': 'View products',
+  'products:create': 'Add products',
+  'products:edit': 'Edit products',
+  'products:delete': 'Delete products',
+  'products:manage_stock': 'Manage stock levels',
+  'sales:view': 'View sales',
+  'sales:create': 'Create sales (POS)',
+  'sales:edit': 'Edit sales',
+  'sales:cancel': 'Cancel sales',
+  'sales:refund': 'Refund sales',
+  'receipts:view': 'View own receipts',
+  'receipts:view_all': 'View all receipts',
+  'receipts:create': 'Create receipts',
+  'receipts:generate': 'Generate receipt documents',
+  'receipts:refund': 'Refund receipts',
+  'receipts:void': 'Void receipts',
+  'purchases:view': 'View purchases',
+  'purchases:create': 'Receive stock purchases',
+  'suppliers:view': 'View suppliers',
+  'suppliers:create': 'Add suppliers',
+  'suppliers:edit': 'Edit suppliers',
+  'customers:view': 'View customers',
+  'customers:create': 'Add customers',
+  'customers:edit': 'Edit customers',
+  'expenses:view': 'View expenses',
+  'expenses:create': 'Record expenses',
+  'finance:view': 'View finance ledgers',
+  'finance:record_payment': 'Record debt payments',
+  'reports:view': 'View reports',
+  'employees:view': 'View staff',
+  'employees:create': 'Add staff',
+  'employees:edit': 'Edit staff permissions',
+  'employees:deactivate': 'Deactivate staff',
+  'settings:view': 'View settings',
+  'settings:edit': 'Edit settings',
+};
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   [ROLES.OWNER]: Object.values(PERMISSIONS),
@@ -199,7 +243,6 @@ export const ROUTES = {
   APP_REPORTS_PROFIT: '/app/reports/profit',
   APP_REPORTS_EXPENSES: '/app/reports/expenses',
   APP_REPORTS_DEBTS: '/app/reports/debts',
-  APP_REPORTS_EMPLOYEES: '/app/reports/employees',
   APP_EMPLOYEES: '/app/employees',
   APP_EMPLOYEES_NEW: '/app/employees/new',
   APP_EMPLOYEE_DETAIL: '/app/employees/:employeeId',

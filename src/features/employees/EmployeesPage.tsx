@@ -7,7 +7,14 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Modal, ConfirmModal } from '@/components/ui/Modal';
 import { DataTable } from '@/components/tables/DataTable';
 import { authService } from '@/services';
-import { PERMISSIONS, ROLE_PERMISSIONS, ROLES, ROUTES } from '@/constants';
+import {
+  PERMISSIONS,
+  PERMISSION_LABELS,
+  ROLE_LABELS,
+  ROLE_PERMISSIONS,
+  ROLES,
+  ROUTES,
+} from '@/constants';
 import { toast } from '@/lib/toast';
 import { getAuthErrorMessage } from '@/features/auth/authErrors';
 import { useAuth } from '@/features/auth';
@@ -19,12 +26,6 @@ const ROLE_OPTIONS = [
   { value: ROLES.STOCK_MANAGER, label: 'Stock Manager' },
   { value: ROLES.OWNER, label: 'Store Owner' },
 ];
-
-const ROLE_LABELS: Record<string, string> = {
-  owner: 'Store Owner',
-  salesperson: 'Salesperson',
-  stock_manager: 'Stock Manager',
-};
 
 const ALL_PERMISSIONS = Object.values(PERMISSIONS);
 
@@ -150,7 +151,7 @@ export function EmployeesPage() {
       render: (employee: User) => (
         <Badge variant={employee.role === 'owner' ? 'info' : 'neutral'}>
           <Shield className="h-3 w-3 mr-1" />
-          {ROLE_LABELS[employee.role] || employee.role}
+          {ROLE_LABELS[employee.role as keyof typeof ROLE_LABELS] || employee.role}
         </Badge>
       ),
     },
@@ -205,7 +206,7 @@ export function EmployeesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Staff & Access Control"
+        title="Employees"
         description="Manage cashier logins, role assignments, and feature permissions."
         action={
           isOwner ? (
@@ -221,26 +222,27 @@ export function EmployeesPage() {
         columns={columns}
         data={employees}
         loading={loading}
+        searchPlaceholder="Search staff by name or email..."
         emptyTitle="No staff accounts on file"
         emptyMessage="Click 'Add Staff Member' to register staff users for POS sales and stock receiving."
         mobileCardRender={(employee) => (
           <div className="space-y-2.5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-bold text-sm text-text-primary">{employee.name}</p>
-                <p className="text-xs text-text-muted">{employee.email}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-text-primary">{employee.name}</p>
+                <p className="truncate text-xs text-text-muted">{employee.email}</p>
               </div>
               <Badge variant={employee.active ? 'success' : 'danger'}>
                 {employee.active ? 'Active' : 'Deactivated'}
               </Badge>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-border/60">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2">
               <Badge variant={employee.role === 'owner' ? 'info' : 'neutral'}>
-                {ROLE_LABELS[employee.role] || employee.role}
+                {ROLE_LABELS[employee.role as keyof typeof ROLE_LABELS] || employee.role}
               </Badge>
               {isOwner && employee.role !== 'owner' && (
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <Button
                     size="sm"
                     variant="outline"
@@ -339,7 +341,9 @@ export function EmployeesPage() {
                       onChange={() => togglePermission(perm)}
                       className="rounded border-border text-brand focus:ring-brand"
                     />
-                    <span className="truncate">{perm}</span>
+                    <span className="truncate">
+                      {PERMISSION_LABELS[perm as keyof typeof PERMISSION_LABELS] || perm}
+                    </span>
                   </label>
                 ))}
               </div>

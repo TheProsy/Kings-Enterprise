@@ -233,11 +233,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'customers/debts',
-        element: (
-          <RequirePermission permission={PERMISSIONS.CUSTOMERS_VIEW}>
-            <CustomerDebtsPage />
-          </RequirePermission>
-        ),
+        element: <Navigate to={ROUTES.APP_FINANCE_CUSTOMER_DEBTS} replace />,
       },
       {
         path: 'customers/:customerId',
@@ -364,14 +360,6 @@ const router = createBrowserRouter([
         element: (
           <RequirePermission permission={PERMISSIONS.REPORTS_VIEW}>
             <DebtsReportPage />
-          </RequirePermission>
-        ),
-      },
-      {
-        path: 'reports/employees',
-        element: (
-          <RequirePermission permission={PERMISSIONS.REPORTS_VIEW}>
-            <ReportsPage />
           </RequirePermission>
         ),
       },

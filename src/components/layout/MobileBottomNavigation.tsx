@@ -45,7 +45,7 @@ export function MobileBottomNavigation({ onOpenSidebar }: MobileBottomNavigation
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-stretch gap-1 border-t border-border bg-surface px-2 lg:hidden print:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 flex min-h-16 items-stretch gap-1 border-t border-border bg-surface px-2 pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden"
       aria-label="Primary"
     >
       {dashboardItem && renderTab(dashboardItem, 'Home')}

@@ -94,7 +94,7 @@ export function ProductsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Products & Inventory"
+        title="Products & Stock"
         description="Search, monitor stock levels, and manage your building materials catalogue."
         action={
           canCreate ? (

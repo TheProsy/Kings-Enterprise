@@ -13,6 +13,7 @@ import {
   paymentService,
 } from '@/services';
 import { formatMoney } from '@/lib/formatters';
+import { toast } from '@/lib/toast';
 import {
   amountPaidAtSale,
   isActiveInflowPayment,
@@ -21,6 +22,7 @@ import {
 import { ROUTES } from '@/constants';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { ArrowDownLeft, ArrowUpRight, Building2, Users, ChevronRight, BookOpen, TrendingUp } from 'lucide-react';
+import { FinanceTabs } from './FinanceTabs';
 
 export function FinancePage() {
   const navigate = useNavigate();
@@ -71,6 +73,9 @@ export function FinancePage() {
         supplierDebts,
         netPosition: moneyReceived - moneySpent,
       });
+    } catch (error) {
+      console.error(error);
+      toast('Could not load the finance overview.', 'error');
     } finally {
       setLoading(false);
     }
@@ -80,10 +85,48 @@ export function FinancePage() {
     loadStats();
   }, [loadStats]);
 
+  const ledgerLinks = [
+    {
+      title: 'Money Received',
+      description: 'Sales receipts and customer debt collections',
+      route: ROUTES.APP_FINANCE_MONEY_RECEIVED,
+      icon: ArrowDownLeft,
+      iconClassName: 'bg-success-soft text-success-fg',
+    },
+    {
+      title: 'Money Spent',
+      description: 'Purchases, supplier payments and expenses',
+      route: ROUTES.APP_FINANCE_MONEY_SPENT,
+      icon: ArrowUpRight,
+      iconClassName: 'bg-danger-soft text-danger-fg',
+    },
+    {
+      title: 'General Cashbook',
+      description: 'Complete chronological log of money in and out',
+      route: ROUTES.APP_FINANCE_CASHBOOK,
+      icon: BookOpen,
+      iconClassName: 'bg-brand-soft text-brand',
+    },
+    {
+      title: 'Customer Debts',
+      description: 'Credit receivables and collection follow-up',
+      route: ROUTES.APP_FINANCE_CUSTOMER_DEBTS,
+      icon: Users,
+      iconClassName: 'bg-warning-soft text-warning-fg',
+    },
+    {
+      title: 'Supplier Debts',
+      description: 'Outstanding balances owed to suppliers',
+      route: ROUTES.APP_FINANCE_SUPPLIER_DEBTS,
+      icon: Building2,
+      iconClassName: 'bg-danger-soft text-danger-fg',
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Money & Finance Overview"
+        title="Money & Finance"
         description="Monitor cash inflows, operational outflows, liquidity, and receivables."
         action={
           <Button
@@ -96,6 +139,8 @@ export function FinancePage() {
           </Button>
         }
       />
+
+      <FinanceTabs />
 
       {/* 4 Core Financial Summary Cards */}
       {loading ? (
@@ -170,63 +215,35 @@ export function FinancePage() {
           <Card variant="soft" className="p-5 shadow-sm">
             <CardHeader className="p-0 pb-3">
               <CardTitle className="text-sm font-bold uppercase tracking-wider text-text-secondary">
-                Finance & Ledger Reports
+                Finance Ledgers
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0 pt-2 space-y-2.5">
-              <NavLink
-                to={ROUTES.APP_FINANCE_CASHBOOK}
-                className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-border/80 hover:border-brand-soft-border hover:bg-surface-3/70 transition-all shadow-xs group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-brand-soft text-brand flex items-center justify-center font-bold text-xs">
-                    <BookOpen className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm text-text-primary group-hover:text-brand transition-colors">
-                      General Cashbook
-                    </p>
-                    <p className="text-xs text-text-muted">Complete audit log of all money in & out</p>
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-text-muted group-hover:translate-x-0.5 transition-transform" />
-              </NavLink>
-
-              <NavLink
-                to={ROUTES.APP_CUSTOMER_DEBTS}
-                className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-border/80 hover:border-brand-soft-border hover:bg-surface-3/70 transition-all shadow-xs group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-warning-soft text-warning-fg flex items-center justify-center font-bold text-xs">
-                    <Users className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm text-text-primary group-hover:text-brand transition-colors">
-                      Customer Debts Ledger
-                    </p>
-                    <p className="text-xs text-text-muted">Track credit receivables and collections</p>
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-text-muted group-hover:translate-x-0.5 transition-transform" />
-              </NavLink>
-
-              <NavLink
-                to={ROUTES.APP_FINANCE_SUPPLIER_DEBTS}
-                className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-border/80 hover:border-brand-soft-border hover:bg-surface-3/70 transition-all shadow-xs group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-danger-soft text-danger-fg flex items-center justify-center font-bold text-xs">
-                    <Building2 className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm text-text-primary group-hover:text-brand transition-colors">
-                      Supplier Payables Ledger
-                    </p>
-                    <p className="text-xs text-text-muted">Outstanding vendor balance obligations</p>
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-text-muted group-hover:translate-x-0.5 transition-transform" />
-              </NavLink>
+              {ledgerLinks.map((link) => {
+                const Icon = link.icon;
+                return (
+                  <NavLink
+                    key={link.route}
+                    to={link.route}
+                    className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-surface border border-border/80 hover:border-brand-soft-border hover:bg-surface-3/70 transition-all shadow-xs group"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${link.iconClassName}`}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm text-text-primary group-hover:text-brand transition-colors">
+                          {link.title}
+                        </p>
+                        <p className="text-xs text-text-muted">{link.description}</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-text-muted group-hover:translate-x-0.5 transition-transform" />
+                  </NavLink>
+                );
+              })}
             </CardContent>
           </Card>
         </div>

@@ -6,6 +6,7 @@ import { StatsSkeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
 import { saleService, expenseService } from '@/services';
 import { formatMoney } from '@/lib/formatters';
+import { toast } from '@/lib/toast';
 import { TrendingUp, DollarSign, ArrowDownRight, ArrowUpRight, Printer, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '@/constants';
@@ -67,6 +68,7 @@ export function ProfitReportPage() {
       });
     } catch (err) {
       console.error('Failed to load profit statistics:', err);
+      toast('Could not load the profit report.', 'error');
     } finally {
       setLoading(false);
     }
@@ -78,28 +80,28 @@ export function ProfitReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <PageHeader
-          title="Profit & Loss Statement"
-          description="Detailed breakdown of revenue, cost of goods sold, operating expenses, and net profit margins."
-          breadcrumbs={[
-            { label: 'Reports', href: ROUTES.APP_REPORTS },
-            { label: 'Profit & Loss' },
-          ]}
-        />
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <Button variant="secondary" size="sm" asChild>
-            <Link to={ROUTES.APP_REPORTS}>
-              <ArrowLeft className="w-4 h-4 mr-1.5" />
-              All Reports
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
-            <Printer className="w-4 h-4 mr-1.5" />
-            Print P&L
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Profit & Loss"
+        description="Detailed breakdown of revenue, cost of goods sold, operating expenses, and net profit margins."
+        breadcrumbs={[
+          { label: 'Reports', href: ROUTES.APP_REPORTS },
+          { label: 'Profit & Loss' },
+        ]}
+        action={
+          <>
+            <Button variant="secondary" size="sm" asChild>
+              <Link to={ROUTES.APP_REPORTS}>
+                <ArrowLeft className="w-4 h-4 mr-1.5" />
+                All Reports
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Printer className="w-4 h-4 mr-1.5" />
+              Print P&L
+            </Button>
+          </>
+        }
+      />
 
       {/* Primary KPI Stats */}
       {loading ? (
@@ -111,12 +113,14 @@ export function ProfitReportPage() {
             value={formatMoney(stats.totalSalesRevenue || 0)}
             icon={<DollarSign className="w-5 h-5" />}
             description={`${stats.transactionCount || 0} completed sales`}
+            tone="brand"
           />
           <StatCard
             label="Cost of Goods Sold"
             value={formatMoney(stats.totalCOGS || 0)}
             icon={<ArrowDownRight className="w-5 h-5" />}
             description="Direct material costs"
+            tone="danger"
           />
           <StatCard
             label="Gross Profit"
@@ -138,21 +142,21 @@ export function ProfitReportPage() {
       {/* Financial Statement Structure Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Gross Profit Calculation Card */}
-        <Card variant="soft" className="space-y-4">
+        <Card variant="soft" className="p-5 space-y-4">
           <CardHeader>
             <CardTitle>Trading Account (Gross Profit)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex justify-between items-center text-sm py-2 border-b border-border/60">
+            <div className="flex flex-wrap justify-between items-center gap-2 text-sm py-2 border-b border-border/60">
               <span className="text-text-secondary font-medium">Total Sales Revenue</span>
               <span className="font-bold text-text-primary">{formatMoney(stats.totalSalesRevenue || 0)}</span>
             </div>
-            <div className="flex justify-between items-center text-sm py-2 border-b border-border/60">
+            <div className="flex flex-wrap justify-between items-center gap-2 text-sm py-2 border-b border-border/60">
               <span className="text-text-secondary font-medium">Less: Cost of Goods Sold (COGS)</span>
               <span className="font-semibold text-danger">-{formatMoney(stats.totalCOGS || 0)}</span>
             </div>
             <div className="bg-surface/80 rounded-lg p-4 border border-border/80 shadow-xs">
-              <div className="flex justify-between items-center text-base">
+              <div className="flex flex-wrap justify-between items-center gap-2 text-base">
                 <span className="font-bold text-text-primary">Gross Trading Profit</span>
                 <span className={`text-xl font-bold ${(stats.grossProfit || 0) >= 0 ? 'text-success' : 'text-danger'}`}>
                   {formatMoney(stats.grossProfit || 0)}
@@ -166,21 +170,21 @@ export function ProfitReportPage() {
         </Card>
 
         {/* Net Profit Calculation Card */}
-        <Card variant="soft" className="space-y-4">
+        <Card variant="soft" className="p-5 space-y-4">
           <CardHeader>
             <CardTitle>Operating Account (Net Profit)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex justify-between items-center text-sm py-2 border-b border-border/60">
+            <div className="flex flex-wrap justify-between items-center gap-2 text-sm py-2 border-b border-border/60">
               <span className="text-text-secondary font-medium">Gross Profit Brought Down</span>
               <span className="font-bold text-text-primary">{formatMoney(stats.grossProfit || 0)}</span>
             </div>
-            <div className="flex justify-between items-center text-sm py-2 border-b border-border/60">
+            <div className="flex flex-wrap justify-between items-center gap-2 text-sm py-2 border-b border-border/60">
               <span className="text-text-secondary font-medium">Less: Operating & Overhead Expenses</span>
               <span className="font-semibold text-danger">-{formatMoney(stats.totalExpenses || 0)}</span>
             </div>
             <div className="bg-surface/80 rounded-lg p-4 border border-border/80 shadow-xs">
-              <div className="flex justify-between items-center text-base">
+              <div className="flex flex-wrap justify-between items-center gap-2 text-base">
                 <span className="font-bold text-text-primary">Net Clean Profit</span>
                 <span className={`text-xl font-bold ${(stats.netProfit || 0) >= 0 ? 'text-success' : 'text-danger'}`}>
                   {formatMoney(stats.netProfit || 0)}

@@ -16,7 +16,7 @@ export function DateRangeFilter({
 }: DateRangeFilterProps) {
   return (
     <div className={cn('flex flex-col gap-4 md:flex-row md:items-end', className)}>
-      <Field label="From Date" htmlFor="date-range-start" className="min-w-[200px] flex-1">
+      <Field label="From Date" htmlFor="date-range-start" className="w-full flex-1 md:min-w-[200px]">
         <input
           id="date-range-start"
           type="date"
@@ -29,7 +29,7 @@ export function DateRangeFilter({
         />
       </Field>
 
-      <Field label="To Date" htmlFor="date-range-end" className="min-w-[200px] flex-1">
+      <Field label="To Date" htmlFor="date-range-end" className="w-full flex-1 md:min-w-[200px]">
         <input
           id="date-range-end"
           type="date"

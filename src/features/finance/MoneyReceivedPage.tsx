@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent } from '@/components/ui/Card';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { MoneyDisplay } from '@/components/ui/MoneyDisplay';
+import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
 import { paymentService, saleService } from '@/services';
 import { formatMoney, formatDate } from '@/lib/formatters';
 import {
@@ -11,9 +13,17 @@ import {
   saleLinkedPaymentTotals,
 } from '@/lib/payments';
 import { toast } from '@/lib/toast';
+import { ROUTES } from '@/constants';
+import { ArrowDownLeft, ChevronLeft, TrendingUp, Users } from 'lucide-react';
 import type { Payment, Sale } from '@/types';
+import { FinanceTabs } from './FinanceTabs';
+
+function paymentStatusVariant(status: Sale['paymentStatus']) {
+  return status === 'paid' ? 'success' : status === 'partial' ? 'warning' : 'danger';
+}
 
 export function MoneyReceivedPage() {
+  const navigate = useNavigate();
   const [sales, setSales] = useState<Sale[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,122 +71,201 @@ export function MoneyReceivedPage() {
     <div className="space-y-6">
       <PageHeader
         title="Money Received"
-        description="Sales receipts and customer debt payments."
+        description="Sales receipts and customer debt payments collected by the business."
+        breadcrumbs={[
+          { label: 'Money & Finance', href: ROUTES.APP_FINANCE },
+          { label: 'Money Received' },
+        ]}
+        action={
+          <Button variant="secondary" onClick={() => navigate(ROUTES.APP_FINANCE)}>
+            <ChevronLeft className="mr-1.5 h-4 w-4" />
+            Finance Overview
+          </Button>
+        }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-text-secondary">Transactions</p>
-            <p className="text-lg font-bold text-text-primary">{transactionCount}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-text-secondary">Total Received</p>
-            <MoneyDisplay amount={total} size="lg" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-text-secondary">Average per Transaction</p>
-            <MoneyDisplay amount={transactionCount > 0 ? total / transactionCount : 0} size="lg" />
-          </CardContent>
-        </Card>
+      <FinanceTabs />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard
+          label="Transactions"
+          value={transactionCount}
+          subtitle="Sales receipts and collections"
+          icon={<Users className="h-5 w-5" />}
+          tone="neutral"
+        />
+        <StatCard
+          label="Total Received"
+          value={formatMoney(total)}
+          subtitle="All money collected"
+          icon={<ArrowDownLeft className="h-5 w-5" />}
+          tone="success"
+        />
+        <StatCard
+          label="Average per Transaction"
+          value={formatMoney(transactionCount > 0 ? total / transactionCount : 0)}
+          subtitle="Mean collection value"
+          icon={<TrendingUp className="h-5 w-5" />}
+          tone="brand"
+        />
       </div>
 
       <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <CardTitle className="text-base">Sales Receipts</CardTitle>
+          <Badge variant="neutral">{sales.length}</Badge>
+        </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            {loading ? (
-              <div className="px-8 py-8 text-center text-text-secondary">Loading...</div>
-            ) : sales.length > 0 ? (
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-canvas border-b border-border">
-                    <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Date</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Receipt</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Customer</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase text-right">Total</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase text-right">Paid at Sale</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Method</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50">
-                  {sales.map((sale) => (
-                    <tr key={sale.id} className="hover:bg-surface-hover transition-colors">
-                      <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(sale.createdAt)}</td>
-                      <td className="px-4 py-3 text-sm text-text-primary">#{sale.receiptNumber}</td>
-                      <td className="px-4 py-3 text-sm text-text-secondary">
-                        {sale.customerName || (sale.customerId ? 'Customer' : 'Walk-in')}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-text-primary">{formatMoney(sale.total)}</td>
-                      <td className="px-4 py-3 text-sm text-text-primary">{formatMoney(amountPaidAtSale(sale, linkedPaymentTotals))}</td>
-                      <td className="px-4 py-3 text-sm text-text-secondary capitalize">{sale.paymentMethod}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <Badge
-                          variant={
-                            sale.paymentStatus === 'paid'
-                              ? 'success'
-                              : sale.paymentStatus === 'partial'
-                                ? 'warning'
-                                : 'danger'
-                          }
-                        >
+          {loading ? (
+            <div className="px-6 py-10 text-center text-sm text-text-secondary">Loading...</div>
+          ) : sales.length === 0 ? (
+            <div className="px-6 py-10 text-center text-sm text-text-secondary">
+              No completed sales recorded yet.
+            </div>
+          ) : (
+            <>
+              <div className="divide-y divide-border/60 md:hidden">
+                {sales.map((sale) => {
+                  const paid = amountPaidAtSale(sale, linkedPaymentTotals);
+                  return (
+                    <div key={sale.id} className="space-y-2.5 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-text-primary">
+                            #{sale.receiptNumber}
+                          </p>
+                          <p className="mt-0.5 truncate text-xs text-text-secondary">
+                            {sale.customerName ||
+                              (sale.customerId ? 'Customer' : 'Walk-in')}{' '}
+                            · {formatDate(sale.createdAt)}
+                          </p>
+                        </div>
+                        <Badge variant={paymentStatusVariant(sale.paymentStatus)}>
                           {sale.paymentStatus}
                         </Badge>
-                      </td>
+                      </div>
+                      <div className="flex items-end justify-between gap-3">
+                        <p className="text-xs capitalize text-text-muted">
+                          {sale.paymentMethod}
+                        </p>
+                        <div className="text-right">
+                          <p className="text-base font-bold tabular-nums text-success-fg">
+                            {formatMoney(paid)}
+                          </p>
+                          <p className="text-2xs text-text-muted">
+                            of {formatMoney(sale.total)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-border bg-canvas">
+                      <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Date</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Receipt</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Customer</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary text-right">Total</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary text-right">Paid at Sale</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Method</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="px-8 py-8 text-center text-text-secondary">No sales recorded yet.</div>
-            )}
-          </div>
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {sales.map((sale) => (
+                      <tr key={sale.id} className="transition-colors hover:bg-surface-hover">
+                        <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(sale.createdAt)}</td>
+                        <td className="px-4 py-3 text-sm text-text-primary">#{sale.receiptNumber}</td>
+                        <td className="px-4 py-3 text-sm text-text-secondary">
+                          {sale.customerName || (sale.customerId ? 'Customer' : 'Walk-in')}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-text-primary">{formatMoney(sale.total)}</td>
+                        <td className="px-4 py-3 text-sm text-text-primary">
+                          {formatMoney(amountPaidAtSale(sale, linkedPaymentTotals))}
+                        </td>
+                        <td className="px-4 py-3 text-sm capitalize text-text-secondary">{sale.paymentMethod}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <Badge variant={paymentStatusVariant(sale.paymentStatus)}>
+                            {sale.paymentStatus}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
       <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <CardTitle className="text-base">Customer Debt Payments</CardTitle>
+          <Badge variant="neutral">{payments.length}</Badge>
+        </CardHeader>
         <CardContent className="p-0">
-          <div className="border-b border-border px-4 py-3">
-            <h2 className="text-sm font-semibold text-text-primary">Customer Debt Payments</h2>
-          </div>
-          <div className="overflow-x-auto">
-            {payments.length > 0 ? (
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-canvas border-b border-border">
-                    <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Date</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Customer</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase text-right">Amount</th>
-                    <th className="px-4 py-3 text-xs font-semibold text-text-secondary uppercase">Method</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50">
-                  {payments.map((payment) => (
-                    <tr key={payment.id} className="hover:bg-surface-hover transition-colors">
-                      <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(payment.createdAt)}</td>
-                      <td className="px-4 py-3 text-sm text-text-primary">
-                        {payment.partyName || payment.customerId || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-text-primary text-right">
-                        {formatMoney(payment.amount)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-text-secondary capitalize">
-                        {payment.paymentMethod}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="px-8 py-8 text-center text-text-secondary">
-                No debt payments recorded yet.
+          {loading ? (
+            <div className="px-6 py-10 text-center text-sm text-text-secondary">Loading...</div>
+          ) : payments.length === 0 ? (
+            <div className="px-6 py-10 text-center text-sm text-text-secondary">
+              No debt payments recorded yet.
+            </div>
+          ) : (
+            <>
+              <div className="divide-y divide-border/60 md:hidden">
+                {payments.map((payment) => (
+                  <div key={payment.id} className="flex items-start justify-between gap-3 p-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-text-primary">
+                        {payment.partyName || payment.customerId || 'Customer'}
+                      </p>
+                      <p className="mt-0.5 text-xs text-text-secondary">
+                        {formatDate(payment.createdAt)} ·{' '}
+                        <span className="capitalize">{payment.paymentMethod}</span>
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-base font-bold tabular-nums text-success-fg">
+                      {formatMoney(payment.amount)}
+                    </p>
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-border bg-canvas">
+                      <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Date</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Customer</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary text-right">Amount</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Method</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {payments.map((payment) => (
+                      <tr key={payment.id} className="transition-colors hover:bg-surface-hover">
+                        <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(payment.createdAt)}</td>
+                        <td className="px-4 py-3 text-sm text-text-primary">
+                          {payment.partyName || payment.customerId || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right text-sm text-text-primary">
+                          {formatMoney(payment.amount)}
+                        </td>
+                        <td className="px-4 py-3 text-sm capitalize text-text-secondary">
+                          {payment.paymentMethod}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

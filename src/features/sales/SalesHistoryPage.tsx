@@ -187,7 +187,7 @@ export function SalesHistoryPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Sales Records & Receipts"
+        title="Sales History"
         description="Search past sales receipts, monitor credit collections, and inspect itemized breakdown."
         action={
           canCreate ? (

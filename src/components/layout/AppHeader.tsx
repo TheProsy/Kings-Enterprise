@@ -23,21 +23,41 @@ interface AppHeaderProps {
 }
 
 const PAGE_TITLES: Array<[string, string]> = [
-  ['/sales/new', 'New Sale (POS)'],
-  ['/sales', 'Sales Management'],
-  ['/receipts', 'Receipts & Documents'],
-  ['/products/low-stock', 'Low Stock'],
-  ['/products/stock-history', 'Stock Movement History'],
-  ['/products', 'Inventory & Stock'],
-  ['/purchases', 'Purchases & Receiving'],
-  ['/suppliers', 'Supplier Directory'],
-  ['/customers', 'Customer Directory'],
-  ['/expenses', 'Store Expenses'],
-  ['/finance', 'Money & Finance'],
-  ['/reports', 'Business Reports'],
-  ['/employees', 'Staff & Access Control'],
-  ['/settings', 'System Settings'],
-  ['/help', 'Help & User Guide'],
+  ['/app/sales/new', 'New Sale (POS)'],
+  ['/app/sales/history', 'Sales History'],
+  ['/app/sales', 'Sales History'],
+  ['/app/receipts', 'Receipts'],
+  ['/app/products/categories', 'Product Categories'],
+  ['/app/products/low-stock', 'Low Stock'],
+  ['/app/products/stock-history', 'Stock History'],
+  ['/app/products/new', 'Add Product'],
+  ['/app/products', 'Products & Stock'],
+  ['/app/purchases/new', 'Receive Stock'],
+  ['/app/purchases', 'Purchases'],
+  ['/app/suppliers', 'Suppliers'],
+  ['/app/customers/debts', 'Customer Debts'],
+  ['/app/customers', 'Customers'],
+  ['/app/expenses/new', 'Record Expense'],
+  ['/app/expenses/history', 'Expenses'],
+  ['/app/expenses', 'Expenses'],
+  ['/app/finance/money-received', 'Money Received'],
+  ['/app/finance/money-spent', 'Money Spent'],
+  ['/app/finance/customer-debts', 'Customer Debts'],
+  ['/app/finance/supplier-debts', 'Supplier Debts'],
+  ['/app/finance/cashbook', 'Cashbook'],
+  ['/app/finance', 'Money & Finance'],
+  ['/app/reports/sales', 'Sales Report'],
+  ['/app/reports/stock', 'Stock Report'],
+  ['/app/reports/profit', 'Profit & Loss'],
+  ['/app/reports/expenses', 'Expenses Report'],
+  ['/app/reports/debts', 'Debts Report'],
+  ['/app/reports', 'Reports'],
+  ['/app/employees/permissions', 'Staff Permissions'],
+  ['/app/employees', 'Employees'],
+  ['/app/settings/audit-logs', 'Audit Logs'],
+  ['/app/settings', 'Settings'],
+  ['/app/help', 'Help & Guides'],
+  ['/app/dashboard', 'Dashboard'],
 ];
 
 export function AppHeader({ onMenuToggle }: AppHeaderProps) {
@@ -204,7 +224,7 @@ export function AppHeader({ onMenuToggle }: AppHeaderProps) {
               </span>
               <ChevronDown
                 className={cn(
-                  'h-3.5 w-3.5 text-text-muted transition-transform',
+                  'hidden h-3.5 w-3.5 text-text-muted transition-transform sm:block',
                   userMenuOpen && 'rotate-180',
                 )}
                 aria-hidden="true"

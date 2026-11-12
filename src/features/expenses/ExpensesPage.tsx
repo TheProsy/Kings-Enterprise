@@ -122,7 +122,7 @@ export function ExpensesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Store Expenses"
+        title="Expenses"
         description="Track overhead, driver logistics, electricity, wages, and operating costs."
         action={
           canCreate ? (
@@ -138,18 +138,20 @@ export function ExpensesPage() {
       />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
           label="Total Operating Expenses"
           value={formatMoney(totalAll)}
           subtitle="Cumulative expenditures recorded"
-          icon={<CreditCard className="h-5 w-5 text-danger-fg" />}
+          icon={<CreditCard className="h-5 w-5" />}
+          tone="danger"
         />
         <StatCard
           label="Filtered Expenses"
           value={formatMoney(totalFiltered)}
           subtitle={`${filtered.length} matching transaction${filtered.length === 1 ? '' : 's'}`}
-          icon={<Receipt className="h-5 w-5 text-brand" />}
+          icon={<Receipt className="h-5 w-5" />}
+          tone="brand"
         />
       </div>
 
@@ -185,12 +187,16 @@ export function ExpensesPage() {
         }
         mobileCardRender={(e) => (
           <div className="space-y-2">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-bold text-sm text-text-primary">{e.description}</p>
-                <p className="text-xs text-text-muted">{formatDate(e.createdAt)} · {e.paymentMethod || 'cash'}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-text-primary">{e.description}</p>
+                <p className="truncate text-xs capitalize text-text-muted">
+                  {formatDate(e.createdAt)} · {e.paymentMethod || 'cash'}
+                </p>
               </div>
-              <span className="font-bold text-sm text-danger-fg">{formatMoney(e.amount)}</span>
+              <span className="shrink-0 text-sm font-bold tabular-nums text-danger-fg">
+                {formatMoney(e.amount)}
+              </span>
             </div>
             <div className="flex items-center justify-between pt-1">
               <Badge variant="neutral">{e.category}</Badge>

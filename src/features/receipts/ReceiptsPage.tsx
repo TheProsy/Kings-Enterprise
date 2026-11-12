@@ -264,7 +264,7 @@ export function ReceiptsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Receipts & Documents"
+        title="Receipts"
         description="Search every sales, payment, return and void receipt issued by your business."
         action={
           hasPermission(PERMISSIONS.SALES_CREATE) ? (

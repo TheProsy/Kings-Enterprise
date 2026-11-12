@@ -170,14 +170,14 @@ export function CustomersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Customer Management"
+        title="Customers"
         description="Directory of building contractors, artisans, and walk-in trade accounts."
         action={
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate(ROUTES.APP_CUSTOMER_DEBTS)}
+              onClick={() => navigate(ROUTES.APP_FINANCE_CUSTOMER_DEBTS)}
             >
               <AlertCircle className="h-3.5 w-3.5 mr-1 text-warning-fg" />
               Debtors List
@@ -213,13 +213,13 @@ export function CustomersPage() {
         onRowClick={(c) => navigate(buildRoute(ROUTES.APP_CUSTOMER_DETAIL, { customerId: c.id }))}
         mobileCardRender={(c) => (
           <div className="space-y-2.5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-bold text-sm text-text-primary">{c.name}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-text-primary">{c.name}</p>
                 {c.phone && (
-                  <p className="text-xs text-text-muted flex items-center gap-1 mt-0.5">
-                    <Phone className="h-3 w-3" />
-                    {c.phone}
+                  <p className="mt-0.5 flex items-center gap-1 text-xs text-text-muted">
+                    <Phone className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{c.phone}</span>
                   </p>
                 )}
               </div>
@@ -229,18 +229,22 @@ export function CustomersPage() {
             </div>
 
             <div className="grid grid-cols-3 gap-2 text-xs py-2 border-y border-border/60">
-              <div>
+              <div className="min-w-0">
                 <span className="text-text-muted block text-3xs">Purchases</span>
-                <span className="font-bold text-text-primary">{formatMoney(c.totalPurchases || 0)}</span>
+                <span className="block truncate text-2xs font-bold text-text-primary">
+                  {formatMoney(c.totalPurchases || 0)}
+                </span>
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="text-text-muted block text-3xs">Paid</span>
-                <span className="font-semibold text-success-fg">{formatMoney(c.totalPaid || 0)}</span>
+                <span className="block truncate text-2xs font-semibold text-success-fg">
+                  {formatMoney(c.totalPaid || 0)}
+                </span>
               </div>
-              <div className="text-right">
+              <div className="min-w-0 text-right">
                 <span className="text-text-muted block text-3xs">Owes Store</span>
                 <span
-                  className={`font-bold ${
+                  className={`block truncate text-2xs font-bold ${
                     (c.balanceDue || 0) > 0 ? 'text-warning-fg' : 'text-success-fg'
                   }`}
                 >

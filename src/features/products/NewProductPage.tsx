@@ -11,7 +11,7 @@ export function NewProductPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Add New Product"
+        title="Add Product"
         description="Register a building material and set up its variations, pricing, and opening stock."
         action={
           <Button

@@ -165,7 +165,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Store Dashboard"
+        title="Dashboard"
         description={`Welcome back, ${user?.name || 'Owner'}. Here is today's summary for your building materials business.`}
         action={
           <div className="flex items-center gap-2.5">

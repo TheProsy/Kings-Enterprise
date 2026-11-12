@@ -195,8 +195,8 @@ export function DataTable<T>({
 
           <div
             className={cn(
-              'overflow-hidden rounded-xl border border-border bg-surface shadow-xs',
-              mobileCardRender ? 'hidden md:block' : 'overflow-x-auto',
+              'overflow-x-auto rounded-xl border border-border bg-surface shadow-xs',
+              mobileCardRender && 'hidden md:block',
             )}
           >
             <table className="w-full border-collapse text-left">

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { DataTable, type Column } from '@/components/tables/DataTable';
 import { saleService } from '@/services';
 import { formatMoney, formatDate } from '@/lib/formatters';
+import { toast } from '@/lib/toast';
 import { ShoppingCart, TrendingUp, DollarSign, Printer, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '@/constants';
@@ -29,6 +30,7 @@ export function SalesReportPage() {
       );
     } catch (err) {
       console.error('Failed to load sales report data:', err);
+      toast('Could not load the sales report.', 'error');
     } finally {
       setLoading(false);
     }
@@ -106,28 +108,28 @@ export function SalesReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <PageHeader
-          title="Sales Performance Report"
-          description="Comprehensive audit of all store transactions, revenue generation, and payment settlement statuses."
-          breadcrumbs={[
-            { label: 'Reports', href: ROUTES.APP_REPORTS },
-            { label: 'Sales Report' },
-          ]}
-        />
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <Button variant="secondary" size="sm" asChild>
-            <Link to={ROUTES.APP_REPORTS}>
-              <ArrowLeft className="w-4 h-4 mr-1.5" />
-              All Reports
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
-            <Printer className="w-4 h-4 mr-1.5" />
-            Print Report
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Sales Report"
+        description="Comprehensive audit of all store transactions, revenue generation, and payment settlement statuses."
+        breadcrumbs={[
+          { label: 'Reports', href: ROUTES.APP_REPORTS },
+          { label: 'Sales Report' },
+        ]}
+        action={
+          <>
+            <Button variant="secondary" size="sm" asChild>
+              <Link to={ROUTES.APP_REPORTS}>
+                <ArrowLeft className="w-4 h-4 mr-1.5" />
+                All Reports
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Printer className="w-4 h-4 mr-1.5" />
+              Print Report
+            </Button>
+          </>
+        }
+      />
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -136,18 +138,21 @@ export function SalesReportPage() {
           value={sales.length.toString()}
           icon={<ShoppingCart className="w-5 h-5" />}
           description="Transactions recorded"
+          tone="brand"
         />
         <StatCard
           label="Total Revenue Generated"
           value={formatMoney(total)}
           icon={<DollarSign className="w-5 h-5" />}
           description="Gross invoiced volume"
+          tone="success"
         />
         <StatCard
           label="Average Ticket Size"
           value={formatMoney(averageSale)}
           icon={<TrendingUp className="w-5 h-5" />}
           description="Revenue per transaction"
+          tone="warning"
         />
       </div>
 
@@ -162,7 +167,7 @@ export function SalesReportPage() {
           emptyTitle="No sales found"
           emptyDescription="There are no sales transactions matching the criteria."
           mobileCardRender={(s) => (
-            <div className="p-4 space-y-2.5">
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="font-mono text-xs font-bold text-brand">
                   #{s.receiptNumber}
@@ -178,8 +183,8 @@ export function SalesReportPage() {
                   }
                 />
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-text-primary">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="min-w-0 truncate font-medium text-text-primary">
                   {s.customerName || 'Walk-in Customer'}
                 </span>
                 <span className="font-bold text-text-primary">{formatMoney(s.total)}</span>

@@ -170,7 +170,7 @@ export function PurchasesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Supplier Purchases & Stock Intake"
+        title="Purchases"
         description="Track incoming bulk inventory, shipments from suppliers, and payment obligations."
         action={
           canCreate ? (

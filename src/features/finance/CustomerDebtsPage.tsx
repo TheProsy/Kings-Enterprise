@@ -10,7 +10,7 @@ import { formatMoney } from '@/lib/formatters';
 import { ROUTES, buildRoute } from '@/constants';
 import { toast } from '@/lib/toast';
 import type { Customer } from '@/types';
-import { AlertCircle, User } from 'lucide-react';
+import { AlertCircle, Building2, User } from 'lucide-react';
 
 export function CustomerDebtsPage() {
   const navigate = useNavigate();
@@ -116,22 +116,44 @@ export function CustomerDebtsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Customer Debts & Receivables"
+        title="Customer Debts"
         description="Monitor outstanding receivables from contractors and customers on credit."
+        breadcrumbs={[
+          { label: 'Money & Finance', href: ROUTES.APP_FINANCE },
+          { label: 'Customer Debts' },
+        ]}
+        action={
+          <Button
+            variant="secondary"
+            onClick={() => navigate(ROUTES.APP_FINANCE_SUPPLIER_DEBTS)}
+          >
+            <Building2 className="mr-1.5 h-4 w-4" />
+            Supplier Debts
+          </Button>
+        }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           label="Total Uncollected Debt"
           value={formatMoney(total)}
           subtitle="Receivable across all credit customers"
-          icon={<AlertCircle className="h-5 w-5 text-warning-fg" />}
+          icon={<AlertCircle className="h-5 w-5" />}
+          tone="warning"
         />
         <StatCard
           label="Debtor Accounts"
           value={customers.length}
-          subtitle="Customers with active balance due"
-          icon={<User className="h-5 w-5 text-brand" />}
+          subtitle="Customers with an active balance"
+          icon={<User className="h-5 w-5" />}
+          tone="brand"
+        />
+        <StatCard
+          label="Average Balance"
+          value={formatMoney(customers.length > 0 ? total / customers.length : 0)}
+          subtitle="Mean amount owed per debtor"
+          icon={<AlertCircle className="h-5 w-5" />}
+          tone="neutral"
         />
       </div>
 
@@ -139,21 +161,28 @@ export function CustomerDebtsPage() {
         columns={columns}
         data={customers}
         loading={loading}
+        searchPlaceholder="Search customers by name or phone..."
         emptyTitle="All customer debts settled!"
         emptyMessage="There are currently no customers with outstanding balances due to the store."
         onRowClick={(c) => navigate(buildRoute(ROUTES.APP_CUSTOMER_DETAIL, { customerId: c.id }))}
         mobileCardRender={(c) => (
           <div className="space-y-2">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-bold text-sm text-text-primary">{c.name}</p>
-                {c.phone && <p className="text-xs text-text-muted">{c.phone}</p>}
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-text-primary">{c.name}</p>
+                {c.phone && <p className="truncate text-xs text-text-muted">{c.phone}</p>}
               </div>
               <Badge variant="warning">Owes Store</Badge>
             </div>
-            <div className="flex items-center justify-between pt-1 border-t border-border/60 text-xs">
-              <span className="text-text-muted">Balance Due:</span>
-              <span className="font-bold text-sm text-warning-fg">{formatMoney(c.balanceDue || 0)}</span>
+            <div className="flex items-center justify-between border-t border-border/60 pt-2 text-xs">
+              <span className="text-text-muted">Balance due</span>
+              <span className="text-sm font-bold tabular-nums text-warning-fg">
+                {formatMoney(c.balanceDue || 0)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-text-muted">
+              <span>Purchases {formatMoney(c.totalPurchases || 0)}</span>
+              <span>Paid {formatMoney(c.totalPaid || 0)}</span>
             </div>
           </div>
         )}

@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect, useMemo } from 'react';
-import { useSearchParams, NavLink } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -8,7 +8,13 @@ import { Badge } from '@/components/ui/Badge';
 import { ConfirmModal } from '@/components/ui/Modal';
 import { PanelSkeleton } from '@/components/ui/Skeleton';
 import { authService } from '@/services';
-import { PERMISSIONS, ROLE_PERMISSIONS, ROUTES } from '@/constants';
+import {
+  PERMISSIONS,
+  PERMISSION_LABELS,
+  ROLE_LABELS,
+  ROLE_PERMISSIONS,
+  ROUTES,
+} from '@/constants';
 import { toast } from '@/lib/toast';
 import type { User } from '@/types';
 import { Shield, Check, RotateCcw } from 'lucide-react';
@@ -101,6 +107,13 @@ export function EmployeePermissionsPage() {
     setConfirmModalOpen(false);
     try {
       await authService.updateEmployeePermissions(selectedEmployee.id, permissions);
+      setEmployees((current) =>
+        current.map((employee) =>
+          employee.id === selectedEmployee.id
+            ? { ...employee, permissions }
+            : employee,
+        ),
+      );
       toast(`Permissions updated for ${selectedEmployee.name}.`, 'success');
     } catch (error) {
       console.error(error);
@@ -113,13 +126,12 @@ export function EmployeePermissionsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Permission Management"
+        title="Staff Permissions"
         description="Fine-tune feature access and capabilities per staff member."
-        breadcrumb={
-          <NavLink to={ROUTES.APP_EMPLOYEES} className="hover:underline">
-            ← Back to Employees
-          </NavLink>
-        }
+        breadcrumbs={[
+          { label: 'Employees', href: ROUTES.APP_EMPLOYEES },
+          { label: 'Staff Permissions' },
+        ]}
         action={
           <div className="flex items-center gap-2">
             <Button
@@ -177,7 +189,7 @@ export function EmployeePermissionsPage() {
                       </p>
                     </div>
                     <Badge variant={isSelected ? 'outline' : 'neutral'} className={isSelected ? 'text-white border-white/30' : ''}>
-                      {emp.role}
+                      {ROLE_LABELS[emp.role as keyof typeof ROLE_LABELS] || emp.role}
                     </Badge>
                   </button>
                 );
@@ -190,18 +202,18 @@ export function EmployeePermissionsPage() {
         <div className="lg:col-span-8">
           {selectedEmployee ? (
             <Card variant="soft" className="p-6 shadow-sm space-y-6">
-              <div className="flex items-center justify-between pb-3 border-b border-border/60">
-                <div>
-                  <h3 className="font-bold text-base text-text-primary">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border/60">
+                <div className="min-w-0">
+                  <h3 className="truncate text-base font-bold text-text-primary">
                     Permissions for {selectedEmployee.name}
                   </h3>
-                  <p className="text-xs text-text-secondary mt-0.5">
+                  <p className="mt-0.5 text-xs text-text-secondary">
                     {permissions.length} total privileges enabled for this user.
                   </p>
                 </div>
                 <Badge variant="info">
                   <Shield className="h-3.5 w-3.5 mr-1" />
-                  Role: {selectedEmployee.role}
+                  Role: {ROLE_LABELS[selectedEmployee.role as keyof typeof ROLE_LABELS] || selectedEmployee.role}
                 </Badge>
               </div>
 
@@ -231,7 +243,9 @@ export function EmployeePermissionsPage() {
                               onChange={() => togglePermission(perm)}
                               className="rounded border-border text-brand focus:ring-brand"
                             />
-                            <span className="truncate">{perm}</span>
+                            <span className="leading-snug">
+                              {PERMISSION_LABELS[perm as keyof typeof PERMISSION_LABELS] || perm}
+                            </span>
                           </label>
                         );
                       })}

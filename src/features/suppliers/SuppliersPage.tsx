@@ -161,7 +161,7 @@ export function SuppliersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Suppliers Directory"
+        title="Suppliers"
         description="Manage building material distributors, factories, and trade accounts."
         action={
           canCreate ? (
@@ -194,13 +194,13 @@ export function SuppliersPage() {
         onRowClick={(s) => navigate(buildRoute(ROUTES.APP_SUPPLIER_DETAIL, { supplierId: s.id }))}
         mobileCardRender={(s) => (
           <div className="space-y-2.5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-bold text-sm text-text-primary">{s.name}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-text-primary">{s.name}</p>
                 {s.phone && (
-                  <p className="text-xs text-text-muted flex items-center gap-1 mt-0.5">
-                    <Phone className="h-3 w-3" />
-                    {s.phone}
+                  <p className="mt-0.5 flex items-center gap-1 text-xs text-text-muted">
+                    <Phone className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{s.phone}</span>
                   </p>
                 )}
               </div>
@@ -210,14 +210,16 @@ export function SuppliersPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs py-2 border-y border-border/60">
-              <div>
-                <span className="text-text-muted block">Purchases Total:</span>
-                <span className="font-medium text-text-primary">{formatMoney(s.totalPurchases || 0)}</span>
+              <div className="min-w-0">
+                <span className="block text-text-muted">Purchases total</span>
+                <span className="block truncate font-medium text-text-primary">
+                  {formatMoney(s.totalPurchases || 0)}
+                </span>
               </div>
-              <div className="text-right">
-                <span className="text-text-muted block">Amount We Owe:</span>
+              <div className="min-w-0 text-right">
+                <span className="block text-text-muted">Amount we owe</span>
                 <span
-                  className={`font-bold text-sm ${
+                  className={`block truncate text-sm font-bold ${
                     (s.balanceDue || 0) > 0 ? 'text-danger-fg' : 'text-success-fg'
                   }`}
                 >

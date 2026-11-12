@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-
+import { Badge } from '@/components/ui/Badge';
 import { PriceInput } from '@/components/ui/PriceInput';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -172,11 +172,10 @@ export function SupplierDetailPage() {
       <PageHeader
         title={supplier.name}
         description="Vendor ledger, invoices, and debt settlements."
-        breadcrumb={
-          <NavLink to={ROUTES.APP_SUPPLIERS} className="hover:underline">
-            ← Back to Suppliers
-          </NavLink>
-        }
+        breadcrumbs={[
+          { label: 'Suppliers', href: ROUTES.APP_SUPPLIERS },
+          { label: supplier.name },
+        ]}
         action={
           <Button asChild className="shadow-xs">
             <NavLink to={ROUTES.APP_PURCHASES_NEW}>
@@ -284,6 +283,42 @@ export function SupplierDetailPage() {
           loading={loading}
           emptyTitle="No purchases on file"
           emptyMessage="No stock receiving records have been linked to this supplier yet."
+          mobileCardRender={(purchase) => {
+            const balance = purchaseBalances.get(purchase.id) ?? purchase.balanceDue;
+            return (
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-text-primary">
+                      #{purchase.purchaseNumber || purchase.id.slice(0, 8)}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      {formatDate(purchase.createdAt)} · {purchase.items?.length || 0} variants
+                    </p>
+                  </div>
+                  <Badge variant={balance > 0 ? 'danger' : 'success'}>
+                    {balance > 0 ? 'Owing' : 'Settled'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between border-t border-border/60 pt-2 text-xs">
+                  <span className="text-text-muted">Total {formatMoney(purchase.total)}</span>
+                  <span className="font-semibold text-success-fg">
+                    Paid {formatMoney(purchase.amountPaid)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-text-muted">Debt remaining</span>
+                  <span
+                    className={`font-bold ${
+                      balance > 0 ? 'text-danger-fg' : 'text-success-fg'
+                    }`}
+                  >
+                    {balance > 0 ? formatMoney(balance) : 'Settled'}
+                  </span>
+                </div>
+              </div>
+            );
+          }}
         />
       </div>
     </div>

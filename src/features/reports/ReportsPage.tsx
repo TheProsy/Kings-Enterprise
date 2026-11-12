@@ -12,6 +12,7 @@ import {
   saleLinkedPaymentTotals,
 } from '@/lib/payments';
 import { ROUTES } from '@/constants';
+import { toast } from '@/lib/toast';
 import { NavLink } from 'react-router-dom';
 import { TrendingUp, DollarSign, Package, CreditCard, Users, ChevronRight, BarChart3, Download } from 'lucide-react';
 
@@ -71,6 +72,9 @@ export function ReportsPage() {
         grossProfit: totalSales - cogs,
         netProfit: totalSales - cogs - totalExpenses,
       });
+    } catch (error) {
+      console.error(error);
+      toast('Could not load the reports summary.', 'error');
     } finally {
       setLoading(false);
     }
@@ -121,7 +125,7 @@ export function ReportsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Reports & Analytics Hub"
+        title="Reports"
         description="Comprehensive financial reporting, gross profit margins, and inventory performance."
         action={
           <Button
@@ -144,37 +148,43 @@ export function ReportsPage() {
             label="Total Revenue Generated"
             value={formatMoney(stats.totalSales || 0)}
             subtitle="All completed sales transactions"
-            icon={<DollarSign className="h-5 w-5 text-brand" />}
+            icon={<DollarSign className="h-5 w-5" />}
+            tone="brand"
           />
           <StatCard
             label="Estimated Gross Profit"
             value={formatMoney(stats.grossProfit || 0)}
             subtitle="Sales revenue minus material costs"
-            icon={<TrendingUp className="h-5 w-5 text-success-fg" />}
+            icon={<TrendingUp className="h-5 w-5" />}
+            tone="success"
           />
           <StatCard
             label="Net Operating Profit"
             value={formatMoney(stats.netProfit || 0)}
             subtitle="After deducting business expenses"
-            icon={<BarChart3 className="h-5 w-5 text-brand" />}
+            icon={<BarChart3 className="h-5 w-5" />}
+            tone="warning"
           />
           <StatCard
             label="Collected Payments"
             value={formatMoney(stats.totalReceived || 0)}
             subtitle="Verified incoming cash & bank transfers"
-            icon={<DollarSign className="h-5 w-5 text-success-fg" />}
+            icon={<DollarSign className="h-5 w-5" />}
+            tone="success"
           />
           <StatCard
             label="Material Purchases"
             value={formatMoney(stats.totalPurchases || 0)}
             subtitle="Total supplier procurement cost"
-            icon={<Package className="h-5 w-5 text-brand" />}
+            icon={<Package className="h-5 w-5" />}
+            tone="brand"
           />
           <StatCard
             label="Operational Expenses"
             value={formatMoney(stats.totalExpenses || 0)}
             subtitle="Store overhead, transport & salaries"
-            icon={<CreditCard className="h-5 w-5 text-danger-fg" />}
+            icon={<CreditCard className="h-5 w-5" />}
+            tone="danger"
           />
         </div>
       )}

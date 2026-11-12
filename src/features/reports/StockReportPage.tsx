@@ -127,28 +127,28 @@ export function StockReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <PageHeader
-          title="Stock Report"
-          description="See what you have in stock, what needs reordering, and what your inventory is worth."
-          breadcrumbs={[
-            { label: 'Reports', href: ROUTES.APP_REPORTS },
-            { label: 'Stock Report' },
-          ]}
-        />
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <Button variant="secondary" size="sm" asChild>
-            <Link to={ROUTES.APP_REPORTS}>
-              <ArrowLeft className="w-4 h-4 mr-1.5" />
-              All Reports
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
-            <Printer className="w-4 h-4 mr-1.5" />
-            Print Report
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Stock Report"
+        description="See what you have in stock, what needs reordering, and what your inventory is worth."
+        breadcrumbs={[
+          { label: 'Reports', href: ROUTES.APP_REPORTS },
+          { label: 'Stock Report' },
+        ]}
+        action={
+          <>
+            <Button variant="secondary" size="sm" asChild>
+              <Link to={ROUTES.APP_REPORTS}>
+                <ArrowLeft className="w-4 h-4 mr-1.5" />
+                All Reports
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Printer className="w-4 h-4 mr-1.5" />
+              Print Report
+            </Button>
+          </>
+        }
+      />
 
       {/* KPI Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -157,12 +157,14 @@ export function StockReportPage() {
           value={productCount.toString()}
           icon={<Package className="w-5 h-5" />}
           description="Product lines in your catalogue"
+          tone="brand"
         />
         <StatCard
           label="Stock items"
           value={items.length.toString()}
           icon={<Layers className="w-5 h-5" />}
           description="Variations you currently sell"
+          tone="neutral"
         />
         <StatCard
           label="Low stock"
@@ -176,6 +178,7 @@ export function StockReportPage() {
           value={formatMoney(totalStockValue)}
           icon={<DollarSign className="w-5 h-5" />}
           description="Based on cost price"
+          tone="success"
         />
       </div>
 
@@ -192,11 +195,11 @@ export function StockReportPage() {
           mobileCardRender={(item) => {
             const status = stockStatus(item, threshold);
             return (
-              <div className="p-4 space-y-2.5">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="font-bold text-text-primary text-sm">{item.productName}</h4>
-                    {item.brand && <p className="text-xs text-text-secondary">{item.brand}</p>}
+              <div className="space-y-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h4 className="truncate text-sm font-bold text-text-primary">{item.productName}</h4>
+                    {item.brand && <p className="truncate text-xs text-text-secondary">{item.brand}</p>}
                   </div>
                   <StatusBadge
                     status={
@@ -219,15 +222,21 @@ export function StockReportPage() {
                     }
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-xs border-t border-border/40 pt-2">
+                <div className="grid grid-cols-3 gap-2 border-t border-border/40 pt-2 text-xs">
                   <div>
-                    <span className="text-text-secondary block">On Hand:</span>
+                    <span className="block text-text-secondary">On hand</span>
                     <span className="font-bold text-text-primary">
                       {item.quantityOnHand} {item.unit}
                     </span>
                   </div>
                   <div>
-                    <span className="text-text-secondary block">Valuation:</span>
+                    <span className="block text-text-secondary">Reorder</span>
+                    <span className="font-bold text-text-primary">
+                      {effectiveMinimumStock(item, threshold)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-text-secondary">Value</span>
                     <span className="font-bold text-text-primary">
                       {formatMoney(item.costPrice * item.quantityOnHand)}
                     </span>

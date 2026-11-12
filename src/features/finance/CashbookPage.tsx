@@ -13,6 +13,8 @@ import {
 } from '@/lib/payments';
 import { toast } from '@/lib/toast';
 import { ArrowDownLeft, ArrowUpRight, BookOpen } from 'lucide-react';
+import { ROUTES } from '@/constants';
+import { FinanceTabs } from './FinanceTabs';
 
 interface CashbookEntry {
   id: string;
@@ -146,9 +148,9 @@ export function CashbookPage() {
           >
             {e.type === 'in' ? '↓' : '↑'}
           </div>
-          <div>
-            <p className="font-semibold text-xs text-text-primary">{e.description}</p>
-            <p className="text-2xs text-text-muted capitalize">{e.reference}</p>
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-xs text-text-primary">{e.description}</p>
+            <p className="text-2xs capitalize text-text-muted">{e.reference}</p>
           </div>
         </div>
       ),
@@ -182,34 +184,43 @@ export function CashbookPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="General Cashbook Ledger"
+        title="Cashbook"
         description="Unified chronological log of every cash and transfer transaction."
+        breadcrumbs={[
+          { label: 'Money & Finance', href: ROUTES.APP_FINANCE },
+          { label: 'Cashbook' },
+        ]}
       />
 
+      <FinanceTabs />
+
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           label="Net Cashbook Balance"
           value={formatMoney(balance)}
           subtitle="Cumulative liquid position"
-          icon={<BookOpen className="h-5 w-5 text-brand" />}
+          icon={<BookOpen className="h-5 w-5" />}
+          tone="brand"
         />
         <StatCard
           label="Total Money In"
           value={formatMoney(totalIn)}
           subtitle="Sales & debt collections"
-          icon={<ArrowDownLeft className="h-5 w-5 text-success-fg" />}
+          icon={<ArrowDownLeft className="h-5 w-5" />}
+          tone="success"
         />
         <StatCard
           label="Total Money Out"
           value={formatMoney(totalOut)}
           subtitle="Stock payments & expenses"
-          icon={<ArrowUpRight className="h-5 w-5 text-danger-fg" />}
+          icon={<ArrowUpRight className="h-5 w-5" />}
+          tone="danger"
         />
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => setFilterType('all')}
           className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all btn-press ${
@@ -218,7 +229,7 @@ export function CashbookPage() {
               : 'bg-surface-3 text-text-secondary hover:text-text-primary border border-border/80'
           }`}
         >
-          All Entries ({entries.length})
+          All ({entries.length})
         </button>
         <button
           onClick={() => setFilterType('in')}
@@ -228,7 +239,7 @@ export function CashbookPage() {
               : 'bg-surface-3 text-text-secondary hover:text-text-primary border border-border/80'
           }`}
         >
-          Money In (Inflows)
+          Money In ({entries.filter((e) => e.type === 'in').length})
         </button>
         <button
           onClick={() => setFilterType('out')}
@@ -238,7 +249,7 @@ export function CashbookPage() {
               : 'bg-surface-3 text-text-secondary hover:text-text-primary border border-border/80'
           }`}
         >
-          Money Out (Disbursements)
+          Money Out ({entries.filter((e) => e.type === 'out').length})
         </button>
       </div>
 
@@ -250,13 +261,15 @@ export function CashbookPage() {
         emptyMessage="Financial transactions will be recorded automatically as sales and expenses happen."
         mobileCardRender={(e) => (
           <div className="space-y-2">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-bold text-sm text-text-primary">{e.description}</p>
-                <p className="text-xs text-text-muted">{formatDate(e.date)} · {e.reference}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-text-primary">{e.description}</p>
+                <p className="truncate text-xs text-text-muted">
+                  {formatDate(e.date)} · <span className="capitalize">{e.reference}</span>
+                </p>
               </div>
               <span
-                className={`font-bold text-sm ${
+                className={`shrink-0 text-sm font-bold tabular-nums ${
                   e.type === 'in' ? 'text-success-fg' : 'text-danger-fg'
                 }`}
               >

@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable } from '@/components/tables/DataTable';
 import { customerService, saleService, checkoutService, receiptService } from '@/services';
 import { ROUTES, PERMISSIONS } from '@/constants';
-import { NavLink, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { formatMoney, formatDate, toKobo, generateId } from '@/lib/formatters';
 import { toast } from '@/lib/toast';
 import { useAuth } from '@/features/auth';
@@ -209,11 +209,10 @@ export function CustomerDetailPage() {
       <PageHeader
         title={customer.name}
         description="Customer ledger, credit status, and chronological transaction receipts."
-        breadcrumb={
-          <NavLink to={ROUTES.APP_CUSTOMERS} className="hover:underline">
-            ← Back to Customers
-          </NavLink>
-        }
+        breadcrumbs={[
+          { label: 'Customers', href: ROUTES.APP_CUSTOMERS },
+          { label: customer.name },
+        ]}
       />
 
       {/* Financial Overview Cards */}
@@ -323,6 +322,39 @@ export function CustomerDetailPage() {
           loading={loading}
           emptyTitle="No purchases recorded"
           emptyMessage="This customer has not completed any purchases under their account yet."
+          mobileCardRender={(sale) => (
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-text-primary">
+                    #{sale.receiptNumber}
+                  </p>
+                  <p className="text-xs text-text-muted">
+                    {formatDate(sale.createdAt)} · {sale.items?.length || 0} items
+                  </p>
+                </div>
+                <Badge variant={sale.status === 'completed' ? 'success' : 'warning'}>
+                  {sale.status}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between border-t border-border/60 pt-2 text-xs">
+                <span className="text-text-muted">Total {formatMoney(sale.total)}</span>
+                <span className="font-semibold text-success-fg">
+                  Paid {formatMoney(sale.amountPaid)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-text-muted">Balance due</span>
+                <span
+                  className={`font-bold ${
+                    sale.balanceDue > 0 ? 'text-warning-fg' : 'text-success-fg'
+                  }`}
+                >
+                  {sale.balanceDue > 0 ? formatMoney(sale.balanceDue) : 'Settled'}
+                </span>
+              </div>
+            </div>
+          )}
         />
       </div>
     </div>

@@ -99,7 +99,7 @@ export function HelpPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Help & Operations Guide"
+        title="Help & Guides"
         description="Step-by-step illustrated workflows for building materials store management."
       />
 
@@ -123,36 +123,33 @@ export function HelpPage() {
               variant="soft"
               className="p-5 shadow-sm transition-all"
             >
-              <div
+              <button
+                type="button"
                 onClick={() => toggle(i)}
-                className="flex items-start justify-between gap-3 cursor-pointer select-none"
+                aria-expanded={isOpen}
+                className="flex w-full select-none items-start justify-between gap-3 text-left"
               >
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-surface-3 border border-border/80 shadow-xs flex items-center justify-center text-brand flex-shrink-0 mt-0.5">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-surface-3 text-brand shadow-xs">
                     <Icon className="h-4 w-4" />
                   </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-text-primary leading-snug">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold leading-snug text-text-primary">
                       {guide.title}
                     </h3>
-                    <p className="text-xs text-text-secondary mt-1 leading-relaxed">
+                    <p className="mt-1 text-xs leading-relaxed text-text-secondary">
                       {guide.summary}
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className="p-1 rounded text-text-muted hover:text-text-primary"
-                  aria-label={isOpen ? 'Collapse' : 'Expand'}
-                >
-                  <ChevronDown
-                    className={cn(
-                      'h-4 w-4 transition-transform duration-200',
-                      isOpen ? 'rotate-180 text-brand' : '',
-                    )}
-                  />
-                </button>
-              </div>
+                <ChevronDown
+                  className={cn(
+                    'mt-1 h-4 w-4 shrink-0 text-text-muted transition-transform duration-200',
+                    isOpen ? 'rotate-180 text-brand' : '',
+                  )}
+                  aria-hidden="true"
+                />
+              </button>
 
               {isOpen && (
                 <div className="mt-4 pt-3 border-t border-border/60 space-y-2 animate-fade-in">
@@ -172,33 +169,33 @@ export function HelpPage() {
       </div>
 
       {/* Support Contacts Card */}
-      <Card variant="soft" className="p-6 shadow-sm">
+      <Card variant="soft" className="p-4 shadow-sm sm:p-6">
         <h3 className="font-bold text-base text-text-primary mb-2">Need Technical Assistance?</h3>
         <p className="text-xs text-text-secondary mb-4 max-w-xl">
           For network setup, thermal Bluetooth printer pairing, user access recovery, or inventory audit questions, reach our operations support team:
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <div className="p-3 rounded-xl bg-surface border border-border shadow-xs flex items-center gap-3">
-            <Phone className="h-4 w-4 text-brand" />
-            <div>
+            <Phone className="h-4 w-4 shrink-0 text-brand" />
+            <div className="min-w-0">
               <p className="text-text-muted text-3xs uppercase font-semibold">Support Line</p>
-              <p className="font-bold text-text-primary">{BUSINESS.phone}</p>
+              <p className="truncate font-bold text-text-primary">{BUSINESS.phone}</p>
             </div>
           </div>
           {BUSINESS.email && (
             <div className="p-3 rounded-xl bg-surface border border-border shadow-xs flex items-center gap-3">
-              <Mail className="h-4 w-4 text-brand" />
-              <div>
+              <Mail className="h-4 w-4 shrink-0 text-brand" />
+              <div className="min-w-0">
                 <p className="text-text-muted text-3xs uppercase font-semibold">Store Email</p>
-                <p className="font-bold text-text-primary truncate">{BUSINESS.email}</p>
+                <p className="truncate font-bold text-text-primary">{BUSINESS.email}</p>
               </div>
             </div>
           )}
           <div className="p-3 rounded-xl bg-surface border border-border shadow-xs flex items-center gap-3">
-            <MapPin className="h-4 w-4 text-brand" />
-            <div>
-              <p className="text-text-muted text-3xs uppercase font-semibold">Depot Depot</p>
-              <p className="font-bold text-text-primary truncate">{BUSINESS.address}</p>
+            <MapPin className="h-4 w-4 shrink-0 text-brand" />
+            <div className="min-w-0">
+              <p className="text-text-muted text-3xs uppercase font-semibold">Depot Address</p>
+              <p className="truncate font-bold text-text-primary">{BUSINESS.address}</p>
             </div>
           </div>
         </div>

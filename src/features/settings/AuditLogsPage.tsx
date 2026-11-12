@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable } from '@/components/tables/DataTable';
 import { Badge } from '@/components/ui/Badge';
@@ -82,31 +81,31 @@ export function AuditLogsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Security & System Audit Logs"
+        title="Audit Logs"
         description="Immutable chronological record of sensitive operations, edits, and staff logins."
-        breadcrumb={
-          <NavLink to={ROUTES.APP_SETTINGS} className="hover:underline">
-            ← Back to Settings
-          </NavLink>
-        }
+        breadcrumbs={[
+          { label: 'Settings', href: ROUTES.APP_SETTINGS },
+          { label: 'Audit Logs' },
+        ]}
       />
 
       <DataTable
         columns={columns}
         data={logs}
         loading={loading}
+        searchPlaceholder="Search audit events..."
         emptyTitle="No audit logs recorded"
         emptyMessage={error || 'Security events will appear here as administrative actions occur.'}
         mobileCardRender={(log) => (
           <div className="space-y-1.5 text-xs">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <Badge variant="info">{log.action}</Badge>
               <span className="text-text-muted">{formatDateTime(log.createdAt)}</span>
             </div>
-            <p className="font-semibold text-text-primary">
+            <p className="truncate font-semibold text-text-primary">
               Scope: {log.entityType} ({log.entityId || 'general'})
             </p>
-            <p className="text-text-muted font-mono text-2xs truncate">
+            <p className="truncate font-mono text-2xs text-text-muted">
               User: {log.userId}
             </p>
           </div>
