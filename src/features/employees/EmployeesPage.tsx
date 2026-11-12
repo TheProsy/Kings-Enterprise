@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Modal, ConfirmModal } from '@/components/ui/Modal';
 import { DataTable } from '@/components/tables/DataTable';
+import { DeleteRecordButton } from '@/components/common/DeleteRecordButton';
 import { authService } from '@/services';
 import {
   PERMISSIONS,
@@ -129,6 +130,11 @@ export function EmployeesPage() {
     }
   };
 
+  const removeEmployee = async (employee: User) => {
+    await authService.deleteEmployee(employee.id);
+    setEmployees((current) => current.filter((entry) => entry.id !== employee.id));
+  };
+
   const columns = [
     {
       key: 'name',
@@ -171,20 +177,25 @@ export function EmployeesPage() {
       className: 'text-right',
       render: (employee: User) => (
         <div className="flex items-center justify-end gap-2">
-          {isOwner && employee.role !== 'owner' && (
+          {isOwner && employee.id === user?.id && (
+            <span className="text-xs font-medium text-text-muted">Current account</span>
+          )}
+          {isOwner && employee.id !== user?.id && (
             <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  navigate(
-                    `${ROUTES.APP_EMPLOYEE_PERMISSIONS}?employee=${employee.id}`,
-                  )
-                }
-              >
-                <KeyRound className="h-3 w-3 mr-1" />
-                Permissions
-              </Button>
+              {employee.role !== ROLES.OWNER && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    navigate(
+                      `${ROUTES.APP_EMPLOYEE_PERMISSIONS}?employee=${employee.id}`,
+                    )
+                  }
+                >
+                  <KeyRound className="h-3 w-3 mr-1" />
+                  Permissions
+                </Button>
+              )}
               {employee.active && (
                 <Button
                   size="sm"
@@ -196,6 +207,12 @@ export function EmployeesPage() {
                   Deactivate
                 </Button>
               )}
+              <DeleteRecordButton
+                entityLabel="Employee"
+                recordLabel={employee.name}
+                description="Their staff profile and sign-in access are removed immediately. Sales and receipts they processed are kept."
+                onDelete={() => removeEmployee(employee)}
+              />
             </>
           )}
         </div>
@@ -241,19 +258,24 @@ export function EmployeesPage() {
               <Badge variant={employee.role === 'owner' ? 'info' : 'neutral'}>
                 {ROLE_LABELS[employee.role as keyof typeof ROLE_LABELS] || employee.role}
               </Badge>
-              {isOwner && employee.role !== 'owner' && (
+              {isOwner && employee.id === user?.id && (
+                <span className="text-xs font-medium text-text-muted">Current account</span>
+              )}
+              {isOwner && employee.id !== user?.id && (
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      navigate(
-                        `${ROUTES.APP_EMPLOYEE_PERMISSIONS}?employee=${employee.id}`,
-                      )
-                    }
-                  >
-                    Permissions
-                  </Button>
+                  {employee.role !== ROLES.OWNER && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        navigate(
+                          `${ROUTES.APP_EMPLOYEE_PERMISSIONS}?employee=${employee.id}`,
+                        )
+                      }
+                    >
+                      Permissions
+                    </Button>
+                  )}
                   {employee.active && (
                     <Button
                       size="sm"
@@ -264,6 +286,12 @@ export function EmployeesPage() {
                       Deactivate
                     </Button>
                   )}
+                  <DeleteRecordButton
+                    entityLabel="Employee"
+                    recordLabel={employee.name}
+                    description="Their staff profile and sign-in access are removed immediately. Sales and receipts they processed are kept."
+                    onDelete={() => removeEmployee(employee)}
+                  />
                 </div>
               )}
             </div>

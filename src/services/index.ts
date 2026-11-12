@@ -171,6 +171,26 @@ export const authService = {
     await updateDoc(userRef, { active: false, updatedAt: serverTimestamp() });
   },
 
+  async deleteEmployee(userId: string) {
+    if (auth.currentUser?.uid === userId) {
+      throw new Error('CANNOT_DELETE_SELF');
+    }
+
+    const userRef = doc(db, `businesses/${BUSINESS_ID}/users/${userId}`);
+    const snapshot = await getDoc(userRef);
+    if (!snapshot.exists()) {
+      throw new Error('EMPLOYEE_NOT_FOUND');
+    }
+
+    const employee = snapshot.data() as User;
+    await deleteDoc(userRef);
+    await recordDeletionAudit('employee', userId, {
+      name: employee.name,
+      email: employee.email,
+      role: employee.role,
+    });
+  },
+
   async getEmployees() {
     const q = query(collection(db, `businesses/${BUSINESS_ID}/users`));
     const snap = await getDocs(q);
