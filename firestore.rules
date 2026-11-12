@@ -368,7 +368,11 @@ service cloud.firestore {
       allow read: if isBusinessMember(businessId);
       allow create:
         if isBusinessMember(businessId) &&
-        (isOwner(businessId) || hasPermission(businessId, 'customers:create'));
+        (
+          isOwner(businessId) ||
+          hasPermission(businessId, 'customers:create') ||
+          hasPermission(businessId, 'sales:create')
+        );
       allow update:
         if isBusinessMember(businessId) &&
         (

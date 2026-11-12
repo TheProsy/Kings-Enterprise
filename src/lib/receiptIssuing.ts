@@ -2,8 +2,12 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
+  limit,
+  query,
   runTransaction,
   serverTimestamp,
+  where,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config';
 import { BUSINESS } from '@/config/business';
@@ -303,8 +307,9 @@ function saleCustomerSnapshot(
   customer: PlainRecord | null,
 ): ReceiptCustomerSnapshot {
   const name =
-    String(customer?.name || input.customerName || '').trim() ||
-    DEFAULT_WALK_IN_CUSTOMER;
+    String(
+      customer?.name || input.customerName || input.customerPhone || '',
+    ).trim() || DEFAULT_WALK_IN_CUSTOMER;
   const phone = String(customer?.phone || input.customerPhone || '').trim();
   const address = String(
     customer?.address || input.customerAddress || '',
@@ -325,6 +330,17 @@ function customerFromSale(sale: PlainRecord): ReceiptCustomerSnapshot {
     phone: snapshot.phone ? String(snapshot.phone) : undefined,
     address: snapshot.address ? String(snapshot.address) : undefined,
   });
+}
+
+async function findCustomerIdByPhone(phone: string): Promise<string | undefined> {
+  const snap = await getDocs(
+    query(
+      collection(db, `businesses/${BUSINESS_ID}/customers`),
+      where('phone', '==', phone),
+      limit(1),
+    ),
+  );
+  return snap.empty ? undefined : snap.docs[0].id;
 }
 
 export async function createSaleReceipt(
@@ -360,9 +376,19 @@ export async function createSaleReceipt(
     db,
     `businesses/${BUSINESS_ID}/idempotency/${safeDocId(input.idempotencyKey)}`,
   );
-  const customerRef = input.customerId
-    ? doc(db, `businesses/${BUSINESS_ID}/customers/${input.customerId}`)
-    : null;
+  const typedCustomerName = String(input.customerName || '').trim();
+  const typedCustomerPhone = String(input.customerPhone || '').trim();
+  const typedCustomerAddress = String(input.customerAddress || '').trim();
+  const matchedCustomerId =
+    !input.customerId && typedCustomerPhone
+      ? await findCustomerIdByPhone(typedCustomerPhone)
+      : undefined;
+  const resolvedCustomerId = input.customerId || matchedCustomerId;
+  const customerRef = resolvedCustomerId
+    ? doc(db, `businesses/${BUSINESS_ID}/customers/${resolvedCustomerId}`)
+    : typedCustomerName || typedCustomerPhone
+      ? doc(collection(db, `businesses/${BUSINESS_ID}/customers`))
+      : null;
   const variantRefs = input.items.map((item) =>
     doc(
       db,
@@ -390,7 +416,12 @@ export async function createSaleReceipt(
     const variantSnaps = await Promise.all(
       variantRefs.map((ref) => tx.get(ref)),
     );
-    const customerSnap = customerRef ? await tx.get(customerRef) : null;
+    const customerSnap = resolvedCustomerId && customerRef
+      ? await tx.get(customerRef)
+      : null;
+    if (customerSnap && !customerSnap.exists()) {
+      throw new Error('Customer account not found. Please select the customer again.');
+    }
     const counterSnap = await tx.get(counterRef);
 
     const lineItems: PlainRecord[] = [];
@@ -447,6 +478,11 @@ export async function createSaleReceipt(
       Math.min(money(Number(input.amountPaid) || 0), total),
     );
     const balanceDue = Math.max(0, total - amountPaid);
+    if (balanceDue > 0 && !customerRef) {
+      throw new Error(
+        'Enter the customer name or phone so the unpaid balance can be tracked.',
+      );
+    }
     const newSalePaymentStatus = salePaymentStatus(amountPaid, total);
     const receiptStatus = receiptPaymentStatus(amountPaid, total);
     const sequence = nextSequence(counterSnap.data(), 'receipt');
@@ -461,8 +497,17 @@ export async function createSaleReceipt(
       ? (customerSnap.data() as PlainRecord)
       : null;
     const customerName = String(
-      customerData?.name || input.customerName || DEFAULT_WALK_IN_CUSTOMER,
+      customerData?.name ||
+        typedCustomerName ||
+        typedCustomerPhone ||
+        DEFAULT_WALK_IN_CUSTOMER,
     );
+    const customerPhone = String(
+      customerData?.phone || typedCustomerPhone || '',
+    ).trim();
+    const customerAddress = String(
+      customerData?.address || typedCustomerAddress || '',
+    ).trim();
     const receiptItems = receiptItemsFromSaleItems(lineItems);
 
     const salePayload = cleanUndefined({
@@ -472,10 +517,10 @@ export async function createSaleReceipt(
       receiptNumber,
       employeeId: staffUserId(profile) || input.employeeId,
       employeeName: staffDisplayName(profile),
-      customerId: input.customerId,
+      customerId: customerRef?.id,
       customerName,
-      customerPhone: customerData?.phone || input.customerPhone,
-      customerAddress: customerData?.address || input.customerAddress,
+      customerPhone: customerPhone || undefined,
+      customerAddress: customerAddress || undefined,
       items: lineItems.map(
         ({
           variantRef: _variantRef,
@@ -514,7 +559,7 @@ export async function createSaleReceipt(
         notes: input.notes,
       }),
       saleId: saleRef.id,
-      customerId: input.customerId,
+      customerId: customerRef?.id,
       items: receiptItems,
       itemCount: receiptItems.reduce(
         (sum, item) => sum + Number(item.quantity ?? 0),
@@ -571,15 +616,34 @@ export async function createSaleReceipt(
       });
     });
 
-    if (customerRef && customerSnap?.exists()) {
+    if (customerRef) {
       const totalPurchases = Number(customerData?.totalPurchases ?? 0) + total;
       const totalPaid = Number(customerData?.totalPaid ?? 0) + amountPaid;
-      tx.update(customerRef, {
-        totalPurchases,
-        totalPaid,
-        balanceDue: Math.max(0, totalPurchases - totalPaid),
-        updatedAt: now,
-      });
+      const customerBalance = Math.max(0, totalPurchases - totalPaid);
+      if (customerSnap?.exists()) {
+        tx.update(customerRef, {
+          totalPurchases,
+          totalPaid,
+          balanceDue: customerBalance,
+          updatedAt: now,
+        });
+      } else {
+        tx.set(
+          customerRef,
+          cleanUndefined({
+            id: customerRef.id,
+            businessId: BUSINESS_ID,
+            name: customerName,
+            phone: customerPhone || undefined,
+            address: customerAddress || undefined,
+            totalPurchases,
+            totalPaid,
+            balanceDue: customerBalance,
+            createdAt: now,
+            updatedAt: now,
+          }),
+        );
+      }
     }
 
     return {

@@ -5,19 +5,21 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Input';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { PanelSkeleton } from '@/components/ui/Skeleton';
-import { Package, CreditCard, Palette, Lock, History, Check, Building2, Receipt, Sun, Moon } from 'lucide-react';
+import { Package, CreditCard, Palette, Lock, History, Check, Building2, Receipt, Sun, Moon, Wrench } from 'lucide-react';
+import { ConfirmModal } from '@/components/ui/Modal';
 import { authService, settingsService } from '@/services';
 import { BUSINESS } from '@/config/business';
-import { PERMISSIONS, ROUTES } from '@/constants';
+import { PERMISSIONS, ROLES, ROUTES } from '@/constants';
 import { useAuth } from '@/features/auth';
 import { DEFAULT_RECEIPT_SETTINGS, normalizeReceiptSettings } from '@/lib/receipts';
 import { DEFAULT_LOW_STOCK_THRESHOLD } from '@/lib/stock';
+import { backfillCustomersFromSales } from '@/lib/backfillCustomers';
 import { toast } from '@/lib/toast';
 import { useTheme } from '@/contexts/useTheme';
 import { cn } from '@/lib/utilities';
 import type { ReceiptSettings as ReceiptConfig } from '@/types';
 
-type SettingsTab = 'business' | 'receipt' | 'inventory' | 'payments' | 'appearance' | 'security';
+type SettingsTab = 'business' | 'receipt' | 'inventory' | 'payments' | 'appearance' | 'security' | 'maintenance';
 
 interface GeneralSettings {
   name: string;
@@ -61,11 +63,14 @@ const DEFAULT_PAYMENTS: PaymentSettings = {
 
 export function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const canEdit = hasPermission(PERMISSIONS.SETTINGS_EDIT);
+  const isOwner = user?.role === ROLES.OWNER;
   const [activeTab, setActiveTab] = useState<SettingsTab>('business');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [backfillOpen, setBackfillOpen] = useState(false);
+  const [backfillLoading, setBackfillLoading] = useState(false);
 
   const [general, setGeneral] = useState<GeneralSettings>(DEFAULT_GENERAL);
   const [receipt, setReceipt] = useState<ReceiptConfig>(DEFAULT_RECEIPT);
@@ -115,6 +120,28 @@ export function SettingsPage() {
     }
   };
 
+  const runCustomerBackfill = async () => {
+    setBackfillLoading(true);
+    try {
+      const result = await backfillCustomersFromSales();
+      toast(
+        `Backfill complete: ${result.salesLinked} sale(s) linked, ${result.customersCreated} customer(s) created, ${result.customersUpdated} balance(s) recalculated.`,
+        'success',
+      );
+      setBackfillOpen(false);
+    } catch (error) {
+      console.error(error);
+      toast(
+        error instanceof Error && error.message
+          ? error.message
+          : 'Could not backfill customer records.',
+        'error',
+      );
+    } finally {
+      setBackfillLoading(false);
+    }
+  };
+
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.length < 6) {
@@ -149,6 +176,9 @@ export function SettingsPage() {
     { id: 'appearance', label: 'Theme & Appearance', icon: Palette },
     { id: 'security', label: 'Account Security', icon: Lock },
   ];
+  if (isOwner) {
+    tabs.push({ id: 'maintenance', label: 'Data Maintenance', icon: Wrench });
+  }
 
   return (
     <div className="space-y-6">
@@ -671,9 +701,53 @@ export function SettingsPage() {
               </CardContent>
             </Card>
           )}
+
+          {activeTab === 'maintenance' && isOwner && (
+            <Card variant="soft" className="p-4 sm:p-6 shadow-sm space-y-5">
+              <CardHeader className="p-0 pb-3 border-b border-border/60">
+                <CardTitle className="text-base font-bold text-text-primary">
+                  Customer Records Backfill
+                </CardTitle>
+                <CardDescription>
+                  Rebuild customer accounts from past sales that were recorded as walk-ins.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 space-y-4">
+                <div className="rounded-xl border border-border bg-surface-2 p-4 text-sm leading-relaxed text-text-secondary">
+                  This scans every sale with a customer name or phone that was never linked
+                  to a customer account. It creates the missing customer records, links each
+                  sale to its account, and recalculates purchase totals and outstanding
+                  balances. Receipts and stock records are not changed. Safe to run more
+                  than once.
+                </div>
+                <div className="flex justify-end pt-3 border-t border-border/60">
+                  <Button
+                    variant="primary"
+                    onClick={() => setBackfillOpen(true)}
+                    isLoading={backfillLoading}
+                    className="shadow-xs font-semibold"
+                  >
+                    <Wrench className="h-4 w-4 mr-1.5" />
+                    Rebuild Customer Records
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
       )}
+
+      <ConfirmModal
+        open={backfillOpen}
+        onClose={() => setBackfillOpen(false)}
+        onConfirm={() => void runCustomerBackfill()}
+        title="Rebuild customer records?"
+        message="This links past walk-in sales to customer accounts and recalculates their balances. It does not change receipts or stock, and it is safe to run more than once."
+        confirmText="Run backfill"
+        variant="primary"
+        isLoading={backfillLoading}
+      />
     </div>
   );
 }

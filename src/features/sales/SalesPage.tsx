@@ -410,11 +410,22 @@ export function SalesPage() {
       );
       return;
     }
-    if (balanceDue > 0 && !customerId) {
-      toast('Select a customer account to record the unpaid balance.', 'warning');
+    const hasTypedCustomer = Boolean(
+      customerNameInput.trim() || customerPhoneInput.trim(),
+    );
+    if (balanceDue > 0 && !customerId && !hasTypedCustomer) {
+      toast(
+        'Enter the customer name or phone so the unpaid balance can be tracked.',
+        'warning',
+      );
       return;
     }
-    if (total > 0 && hasEnteredAmount && enteredAmountKobo === 0 && customerId) {
+    if (
+      total > 0 &&
+      hasEnteredAmount &&
+      enteredAmountKobo === 0 &&
+      (customerId || hasTypedCustomer)
+    ) {
       setConfirmCreditOpen(true);
       return;
     }
@@ -529,7 +540,7 @@ export function SalesPage() {
         <Select
           id={`${idPrefix}-customer`}
           label="Customer account"
-          helper="Choose a customer to track credit, or leave as a walk-in sale."
+          helper="Choose a customer to track credit, or type a new name/phone below to save them automatically."
           options={[
             { value: '', label: 'Walk-in customer (no account)' },
             ...customers.map((customer) => ({
@@ -1019,7 +1030,10 @@ export function SalesPage() {
         }}
         title="Sell on credit?"
         message={`${
-          selectedCustomer?.name ?? 'This customer'
+          selectedCustomer?.name ||
+          customerNameInput.trim() ||
+          customerPhoneInput.trim() ||
+          'This customer'
         } will owe ${formatMoney(total)} for this sale. You can record the payment later from the receipt.`}
         confirmText="Record credit sale"
         variant="primary"
