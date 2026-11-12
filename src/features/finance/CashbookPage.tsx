@@ -257,6 +257,7 @@ export function CashbookPage() {
         columns={columns}
         data={filteredEntries}
         loading={loading}
+        searchPlaceholder="Search by description, reference or flow..."
         emptyTitle="Cashbook is empty"
         emptyMessage="Financial transactions will be recorded automatically as sales and expenses happen."
         mobileCardRender={(e) => (

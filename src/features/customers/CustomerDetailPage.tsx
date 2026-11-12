@@ -320,6 +320,7 @@ export function CustomerDetailPage() {
           columns={columns}
           data={sales}
           loading={loading}
+          searchPlaceholder="Search sales by receipt, status or date..."
           emptyTitle="No purchases recorded"
           emptyMessage="This customer has not completed any purchases under their account yet."
           mobileCardRender={(sale) => (

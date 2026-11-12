@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
+import { SearchInput } from '@/components/forms/SearchInput';
 import { paymentService, saleService } from '@/services';
 import { formatMoney, formatDate } from '@/lib/formatters';
 import {
@@ -26,6 +27,7 @@ export function MoneyReceivedPage() {
   const navigate = useNavigate();
   const [sales, setSales] = useState<Sale[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -57,6 +59,23 @@ export function MoneyReceivedPage() {
     () => saleLinkedPaymentTotals(payments),
     [payments],
   );
+  const term = query.trim().toLowerCase();
+  const filteredSales = useMemo(() => {
+    if (!term) return sales;
+    return sales.filter((sale) =>
+      [sale.receiptNumber, sale.customerName, sale.paymentMethod, sale.paymentStatus]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term)),
+    );
+  }, [sales, term]);
+  const filteredPayments = useMemo(() => {
+    if (!term) return payments;
+    return payments.filter((payment) =>
+      [payment.partyName, payment.customerId, payment.paymentMethod]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term)),
+    );
+  }, [payments, term]);
   const salesReceived = sales.reduce(
     (sum, sale) => sum + amountPaidAtSale(sale, linkedPaymentTotals),
     0,
@@ -110,10 +129,16 @@ export function MoneyReceivedPage() {
         />
       </div>
 
+      <SearchInput
+        value={query}
+        onChange={setQuery}
+        placeholder="Search by receipt, customer, method or status..."
+      />
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border px-4 py-3">
           <CardTitle className="text-base">Sales Receipts</CardTitle>
-          <Badge variant="neutral">{sales.length}</Badge>
+          <Badge variant="neutral">{filteredSales.length}</Badge>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -122,10 +147,14 @@ export function MoneyReceivedPage() {
             <div className="px-6 py-10 text-center text-sm text-text-secondary">
               No completed sales recorded yet.
             </div>
+          ) : filteredSales.length === 0 ? (
+            <div className="px-6 py-10 text-center text-sm text-text-secondary">
+              No sales match “{query.trim()}”. Try a different search term.
+            </div>
           ) : (
             <>
               <div className="divide-y divide-border/60 md:hidden">
-                {sales.map((sale) => {
+                {filteredSales.map((sale) => {
                   const paid = amountPaidAtSale(sale, linkedPaymentTotals);
                   return (
                     <div key={sale.id} className="space-y-2.5 p-4">
@@ -176,7 +205,7 @@ export function MoneyReceivedPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
-                    {sales.map((sale) => (
+                    {filteredSales.map((sale) => (
                       <tr key={sale.id} className="transition-colors hover:bg-surface-hover">
                         <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(sale.createdAt)}</td>
                         <td className="px-4 py-3 text-sm text-text-primary">#{sale.receiptNumber}</td>
@@ -206,7 +235,7 @@ export function MoneyReceivedPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border px-4 py-3">
           <CardTitle className="text-base">Customer Debt Payments</CardTitle>
-          <Badge variant="neutral">{payments.length}</Badge>
+          <Badge variant="neutral">{filteredPayments.length}</Badge>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -215,10 +244,14 @@ export function MoneyReceivedPage() {
             <div className="px-6 py-10 text-center text-sm text-text-secondary">
               No debt payments recorded yet.
             </div>
+          ) : filteredPayments.length === 0 ? (
+            <div className="px-6 py-10 text-center text-sm text-text-secondary">
+              No debt payments match “{query.trim()}”. Try a different search term.
+            </div>
           ) : (
             <>
               <div className="divide-y divide-border/60 md:hidden">
-                {payments.map((payment) => (
+                {filteredPayments.map((payment) => (
                   <div key={payment.id} className="flex items-start justify-between gap-3 p-4">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-text-primary">
@@ -247,7 +280,7 @@ export function MoneyReceivedPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
-                    {payments.map((payment) => (
+                    {filteredPayments.map((payment) => (
                       <tr key={payment.id} className="transition-colors hover:bg-surface-hover">
                         <td className="px-4 py-3 text-sm text-text-secondary">{formatDate(payment.createdAt)}</td>
                         <td className="px-4 py-3 text-sm text-text-primary">

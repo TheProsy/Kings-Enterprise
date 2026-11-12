@@ -281,6 +281,7 @@ export function SupplierDetailPage() {
           columns={columns}
           data={purchases}
           loading={loading}
+          searchPlaceholder="Search purchases by number, status or date..."
           emptyTitle="No purchases on file"
           emptyMessage="No stock receiving records have been linked to this supplier yet."
           mobileCardRender={(purchase) => {

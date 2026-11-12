@@ -189,6 +189,7 @@ export function CategoriesPage() {
         columns={columns}
         data={categories}
         loading={loading}
+        searchPlaceholder="Search categories by name or description..."
         emptyTitle="No categories created"
         emptyMessage="Create categories such as Cement, Iron Rods, Timber, Roofing, and Plumbing to organise your catalogue."
         mobileCardRender={(cat) => (

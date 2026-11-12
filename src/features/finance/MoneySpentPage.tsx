@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
+import { SearchInput } from '@/components/forms/SearchInput';
 import { purchaseService, expenseService, paymentService } from '@/services';
 import { formatMoney, formatDate } from '@/lib/formatters';
 import { toast } from '@/lib/toast';
@@ -17,6 +18,7 @@ export function MoneySpentPage() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [supplierPayments, setSupplierPayments] = useState<Payment[]>([]);
+  const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,6 +49,32 @@ export function MoneySpentPage() {
   const expenseTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const debtTotal = supplierPayments.reduce((sum, payment) => sum + payment.amount, 0);
   const total = purchaseTotal + expenseTotal + debtTotal;
+
+  const term = query.trim().toLowerCase();
+  const filteredPurchases = useMemo(() => {
+    if (!term) return purchases;
+    return purchases.filter((purchase) =>
+      [purchase.purchaseNumber, purchase.supplierName, purchase.paymentMethod]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term)),
+    );
+  }, [purchases, term]);
+  const filteredExpenses = useMemo(() => {
+    if (!term) return expenses;
+    return expenses.filter((expense) =>
+      [expense.description, expense.category, expense.paymentMethod]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term)),
+    );
+  }, [expenses, term]);
+  const filteredSupplierPayments = useMemo(() => {
+    if (!term) return supplierPayments;
+    return supplierPayments.filter((payment) =>
+      [payment.partyName, payment.supplierId, payment.paymentMethod]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term)),
+    );
+  }, [supplierPayments, term]);
 
   return (
     <div className="space-y-6">
@@ -98,6 +126,12 @@ export function MoneySpentPage() {
         />
       </div>
 
+      <SearchInput
+        value={query}
+        onChange={setQuery}
+        placeholder="Search by supplier, description, category or method..."
+      />
+
       {loading ? (
         <Card>
           <CardContent className="px-6 py-10 text-center text-sm text-text-secondary">
@@ -111,9 +145,9 @@ export function MoneySpentPage() {
               <CardTitle className="text-base">Purchase Payments</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              {purchases.length > 0 ? (
+              {filteredPurchases.length > 0 ? (
                 <div className="space-y-3">
-                  {purchases.map((purchase) => (
+                  {filteredPurchases.map((purchase) => (
                     <div
                       key={purchase.id}
                       className="rounded-input border border-border bg-surface p-3"
@@ -139,7 +173,7 @@ export function MoneySpentPage() {
                 </div>
               ) : (
                 <div className="px-2 py-6 text-center text-sm text-text-secondary">
-                  No purchase payments.
+                  {term ? 'No purchase payments match your search.' : 'No purchase payments.'}
                 </div>
               )}
             </CardContent>
@@ -150,9 +184,9 @@ export function MoneySpentPage() {
               <CardTitle className="text-base">Expense Payments</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              {expenses.length > 0 ? (
+              {filteredExpenses.length > 0 ? (
                 <div className="space-y-3">
-                  {expenses.map((expense) => (
+                  {filteredExpenses.map((expense) => (
                     <div
                       key={expense.id}
                       className="rounded-input border border-border bg-surface p-3"
@@ -176,7 +210,7 @@ export function MoneySpentPage() {
                 </div>
               ) : (
                 <div className="px-2 py-6 text-center text-sm text-text-secondary">
-                  No expenses recorded.
+                  {term ? 'No expenses match your search.' : 'No expenses recorded.'}
                 </div>
               )}
             </CardContent>
@@ -187,9 +221,9 @@ export function MoneySpentPage() {
               <CardTitle className="text-base">Supplier Debt Payments</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              {supplierPayments.length > 0 ? (
+              {filteredSupplierPayments.length > 0 ? (
                 <div className="space-y-3">
-                  {supplierPayments.map((payment) => (
+                  {filteredSupplierPayments.map((payment) => (
                     <div
                       key={payment.id}
                       className="rounded-input border border-border bg-surface p-3"
@@ -215,7 +249,7 @@ export function MoneySpentPage() {
                 </div>
               ) : (
                 <div className="px-2 py-6 text-center text-sm text-text-secondary">
-                  No supplier debt payments.
+                  {term ? 'No supplier payments match your search.' : 'No supplier debt payments.'}
                 </div>
               )}
             </CardContent>
