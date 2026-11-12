@@ -7,6 +7,7 @@ import { Hero } from '@/components/ui/Hero';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { ProductImage } from '@/components/ui/ProductImage';
 import { formatMoney } from '@/lib/formatters';
+import { groupCatalogueItems } from '@/lib/catalogue';
 import { catalogueService, type CatalogueItem } from '@/services';
 import { Truck, Package, CreditCard, Users, ChevronRight, BookOpen } from 'lucide-react';
 import { ROUTES } from '@/constants';
@@ -44,6 +45,7 @@ interface FeaturedItem {
   unit: string;
   imageUrl?: string;
   href: string;
+  optionCount?: number;
 }
 
 const FALLBACK_FEATURED: FeaturedItem[] = [
@@ -113,17 +115,19 @@ export function HomePage() {
         if (!active) return;
         setItems(catalogueItems);
 
-        const counts = new Map<string, number>();
+        const counts = new Map<string, Set<string>>();
         catalogueItems.forEach((item) => {
           const name = item.categoryName || 'Other';
-          counts.set(name, (counts.get(name) || 0) + 1);
+          const productIds = counts.get(name) ?? new Set<string>();
+          productIds.add(item.productId);
+          counts.set(name, productIds);
         });
         setCategories(
           catalogueCategories
             .map((category) => ({
               id: category.id,
               name: category.name,
-              count: counts.get(category.name) || 0,
+              count: counts.get(category.name)?.size || 0,
               image: getCategoryImage(category.name),
             }))
             .filter((category) => category.count > 0),
@@ -139,14 +143,23 @@ export function HomePage() {
 
   const featured = useMemo<FeaturedItem[]>(() => {
     if (items.length === 0) return FALLBACK_FEATURED;
-    return items.slice(0, 4).map((item) => ({
-      key: `${item.productId}:${item.id}`,
-      name: item.productName,
-      category: item.categoryName || 'Building Materials',
-      price: item.sellingPrice,
-      unit: item.unit,
-      imageUrl: item.imageUrl || getProductImage(item.productName, item.categoryName),
-      href: `/products/${encodeURIComponent(item.productId)}`,
+    const prioritized = [...groupCatalogueItems(items)].sort((left, right) => {
+      if (left.inStock !== right.inStock) return left.inStock ? -1 : 1;
+      const leftPriced = left.minimumPrice > 0;
+      const rightPriced = right.minimumPrice > 0;
+      if (leftPriced !== rightPriced) return leftPriced ? -1 : 1;
+      return left.productName.localeCompare(right.productName);
+    });
+    return prioritized.slice(0, 4).map((group) => ({
+      key: group.productId,
+      name: group.productName,
+      category: group.categoryName || 'Building Materials',
+      price: group.minimumPrice,
+      unit: group.variants[0].unit,
+      imageUrl:
+        group.imageUrl || getProductImage(group.productName, group.categoryName),
+      href: `/products/${encodeURIComponent(group.productId)}`,
+      optionCount: group.variants.length,
     }));
   }, [items]);
 
@@ -284,10 +297,15 @@ export function HomePage() {
                       className="aspect-[4/3] w-full rounded-none"
                     />
                   </Link>
-                  <div className="absolute left-3 top-3">
+                  <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
                     <Badge variant="default" size="sm">
                       {product.category}
                     </Badge>
+                    {product.optionCount !== undefined && product.optionCount > 1 && (
+                      <Badge variant="default" size="sm">
+                        {product.optionCount} options
+                      </Badge>
+                    )}
                   </div>
                 </div>
 

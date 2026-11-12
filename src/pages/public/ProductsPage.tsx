@@ -38,6 +38,22 @@ interface DisplayProduct {
   attributes?: Record<string, string>;
 }
 
+interface DisplayGroup {
+  key: string;
+  productId?: string;
+  name: string;
+  description?: string;
+  categoryId?: string;
+  category: string;
+  brands: string[];
+  imageUrl?: string;
+  variants: DisplayProduct[];
+  minimumPrice: number;
+  maximumPrice: number;
+  optionCount: number;
+  searchText: string;
+}
+
 const FALLBACK_PRODUCTS: DisplayProduct[] = [
   {
     key: 'p1',
@@ -223,10 +239,22 @@ function ProductDetailView({ variants }: ProductDetailViewProps) {
       specMap.set(entry.label, values);
     }
   }
-  const specs = Array.from(specMap.entries()).map(([label, values]) => ({
-    label,
-    value: Array.from(values).join(', '),
-  }));
+  const brands = Array.from(
+    new Set(
+      variants
+        .map((variant) => variant.brand?.trim())
+        .filter((brand): brand is string => Boolean(brand)),
+    ),
+  );
+  const specs = [
+    ...(brands.length > 1
+      ? [{ label: 'Brands', value: brands.join(', ') }]
+      : []),
+    ...Array.from(specMap.entries()).map(([label, values]) => ({
+      label,
+      value: Array.from(values).join(', '),
+    })),
+  ];
 
   const whatsappHref = `${BUSINESS.whatsapp}?text=${encodeURIComponent(
     `Hello ${BUSINESS.name}, I would like to confirm the price and availability of ${product.name}.`,
@@ -250,7 +278,16 @@ function ProductDetailView({ variants }: ProductDetailViewProps) {
             <Badge variant="default" size="sm">
               {product.category}
             </Badge>
-            {product.brand && <Badge variant="default" size="sm">{product.brand}</Badge>}
+            {brands.length === 1 && (
+              <Badge variant="default" size="sm">
+                {brands[0]}
+              </Badge>
+            )}
+            {brands.length > 1 && (
+              <Badge variant="default" size="sm">
+                {brands.length} brands
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -468,6 +505,67 @@ export function ProductsPage() {
     }));
   }, [items, loading]);
 
+  const groups = useMemo<DisplayGroup[]>(() => {
+    const groupMap = new Map<string, DisplayGroup>();
+    for (const product of products) {
+      const key = product.productId || product.key;
+      let group = groupMap.get(key);
+      if (!group) {
+        group = {
+          key,
+          productId: product.productId,
+          name: product.name,
+          description: product.description,
+          categoryId: product.categoryId,
+          category: product.category,
+          brands: [],
+          imageUrl: product.imageUrl,
+          variants: [],
+          minimumPrice: 0,
+          maximumPrice: 0,
+          optionCount: 0,
+          searchText: '',
+        };
+        groupMap.set(key, group);
+      }
+      group.variants.push(product);
+    }
+
+    const result = Array.from(groupMap.values());
+    result.sort((left, right) => left.name.localeCompare(right.name));
+
+    for (const group of result) {
+      const prices = group.variants
+        .map((variant) => variant.price)
+        .filter((price) => Number.isFinite(price) && price > 0);
+      group.minimumPrice = prices.length > 0 ? Math.min(...prices) : 0;
+      group.maximumPrice = prices.length > 0 ? Math.max(...prices) : 0;
+      group.optionCount = group.variants.length;
+      group.brands = Array.from(
+        new Set(
+          group.variants
+            .map((variant) => variant.brand?.trim())
+            .filter((brand): brand is string => Boolean(brand)),
+        ),
+      );
+      group.searchText = group.variants
+        .flatMap((variant) => [
+          variant.name,
+          variant.brand,
+          variant.category,
+          ...getSpecEntries(variant.attributes).flatMap((entry) => [
+            entry.label,
+            entry.value,
+          ]),
+        ])
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+    }
+
+    return result;
+  }, [products]);
+
   const selectCategory = (category: string) => {
     const next = new URLSearchParams(searchParams);
     if (category === 'All') next.delete('category');
@@ -477,26 +575,23 @@ export function ProductsPage() {
   };
 
   const categories = useMemo(() => {
-    const names = Array.from(new Set(products.map((product) => product.category)));
+    const names = Array.from(new Set(groups.map((group) => group.category)));
     return ['All', ...names];
-  }, [products]);
+  }, [groups]);
 
-  const filtered = products.filter((product) => {
+  const filtered = groups.filter((group) => {
     const matchesCategory =
-      activeCategory === 'All' || product.category === activeCategory;
+      activeCategory === 'All' || group.category === activeCategory;
     const term = search.trim().toLowerCase();
-    const matchesSearch =
-      !term ||
-      product.name.toLowerCase().includes(term) ||
-      product.brand?.toLowerCase().includes(term);
-    const matchesProduct =
-      !productId || (product.productId || product.key) === productId;
+    const matchesSearch = !term || group.searchText.includes(term);
+    const matchesProduct = !productId || group.key === productId;
     const matchesCategoryId =
       !categoryId ||
-      items.some(
-        (item) =>
-          item.productId === (product.productId || product.key) &&
-          (item.categoryId === categoryId || item.categoryName === categoryId),
+      group.categoryId === categoryId ||
+      group.category === categoryId ||
+      group.variants.some(
+        (variant) =>
+          variant.categoryId === categoryId || variant.category === categoryId,
       );
     return matchesCategory && matchesSearch && matchesProduct && matchesCategoryId;
   });
@@ -780,43 +875,55 @@ export function ProductsPage() {
 
           {filtered.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {filtered.map((product) => (
+              {filtered.map((group) => (
                 <Card
-                  key={product.key}
+                  key={group.key}
                   variant="soft"
                   className="group flex flex-col overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="relative">
                     <Link
-                      to={`/products/${encodeURIComponent(product.productId || product.key)}`}
-                      aria-label={`View ${product.name}`}
+                      to={`/products/${encodeURIComponent(group.key)}`}
+                      aria-label={`View ${group.name}`}
                       className="block"
                     >
                       <ProductImage
-                        src={product.imageUrl}
-                        alt={product.name}
+                        src={group.imageUrl}
+                        alt={group.name}
                         className="aspect-[4/3] w-full rounded-none"
                       />
                     </Link>
-                    <div className="absolute left-3 top-3">
+                    <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
                       <Badge variant="default" size="sm">
-                        {product.category}
+                        {group.category}
                       </Badge>
+                      {group.optionCount > 1 && (
+                        <Badge variant="default" size="sm">
+                          {group.optionCount} options
+                        </Badge>
+                      )}
                     </div>
                   </div>
 
                   <CardContent className="flex flex-1 flex-col justify-between p-5">
                     <div className="space-y-1">
                       <h3 className="line-clamp-2 text-base font-bold leading-snug text-text-primary transition-colors group-hover:text-brand">
-                        <Link
-                          to={`/products/${encodeURIComponent(product.productId || product.key)}`}
-                        >
-                          {product.name}
+                        <Link to={`/products/${encodeURIComponent(group.key)}`}>
+                          {group.name}
                         </Link>
                       </h3>
-                      {product.brand && (
+                      {group.brands.length === 1 && (
                         <p className="text-sm font-medium text-text-secondary">
-                          Brand: <span className="text-text-primary">{product.brand}</span>
+                          Brand:{' '}
+                          <span className="text-text-primary">{group.brands[0]}</span>
+                        </p>
+                      )}
+                      {group.brands.length > 1 && (
+                        <p className="line-clamp-2 text-sm font-medium text-text-secondary">
+                          Brands:{' '}
+                          <span className="text-text-primary">
+                            {group.brands.join(', ')}
+                          </span>
                         </p>
                       )}
                     </div>
@@ -826,20 +933,30 @@ export function ProductsPage() {
                         <span className="block text-2xs font-semibold uppercase tracking-wide text-text-muted">
                           Depot Rate
                         </span>
-                        {product.price > 0 ? (
+                        {group.minimumPrice > 0 ? (
                           <>
                             <span className="text-lg font-extrabold tabular-nums text-text-primary">
-                              {formatMoney(product.price)}
+                              {group.minimumPrice === group.maximumPrice
+                                ? formatMoney(group.minimumPrice)
+                                : `From ${formatMoney(group.minimumPrice)}`}
                             </span>
-                            <span className="ml-1 text-xs text-text-secondary">/ {product.unit}</span>
+                            <span className="ml-1 text-xs text-text-secondary">
+                              / {group.variants[0].unit}
+                            </span>
                           </>
                         ) : (
-                          <span className="text-base font-bold text-brand">Price on request</span>
+                          <span className="text-base font-bold text-brand">
+                            Price on request
+                          </span>
                         )}
                       </div>
 
                       <Button variant="secondary" size="sm" asChild className="shrink-0">
-                        <Link to={`${ROUTES.REQUEST_QUOTE}?product=${encodeURIComponent(product.name)}`}>
+                        <Link
+                          to={`${ROUTES.REQUEST_QUOTE}?product=${encodeURIComponent(
+                            group.name,
+                          )}`}
+                        >
                           Add to Quote
                         </Link>
                       </Button>

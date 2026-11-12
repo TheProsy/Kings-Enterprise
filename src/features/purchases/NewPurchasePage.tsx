@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, NavLink } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, NavLink, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
@@ -38,7 +38,14 @@ function variantLabel(item: CatalogueItem) {
 
 export function NewPurchasePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, firebaseUser } = useAuth();
+  const reorderRequest = (
+    location.state as {
+      reorder?: { variantId?: string; quantity?: number };
+    } | null
+  )?.reorder;
+  const preselectHandled = useRef(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [items, setItems] = useState<CatalogueItem[]>([]);
   const [search, setSearch] = useState('');
@@ -53,7 +60,7 @@ export function NewPurchasePage() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([catalogueService.list(), supplierService.list()])
+    Promise.all([catalogueService.list({ fresh: true }), supplierService.list()])
       .then(([catalogue, supplierList]) => {
         if (!active) return;
         setItems(catalogue.items);
@@ -129,6 +136,24 @@ export function NewPurchasePage() {
     });
     toast(`Added ${variant.productName}`, 'info');
   };
+
+  useEffect(() => {
+    if (!reorderRequest?.variantId || preselectHandled.current || items.length === 0) {
+      return;
+    }
+
+    const target = items.find((item) => item.id === reorderRequest.variantId);
+    if (!target) {
+      preselectHandled.current = true;
+      toast('That item is no longer available. Search for it in the list.', 'warning');
+      navigate(location.pathname, { replace: true, state: null });
+      return;
+    }
+
+    preselectHandled.current = true;
+    addToCart(target, Math.max(1, Math.round(reorderRequest.quantity ?? 1)));
+    navigate(location.pathname, { replace: true, state: null });
+  }, [items, reorderRequest, navigate, location.pathname]);
 
   const updateQuantity = (variantId: string, quantity: number) => {
     setCart((current) => {

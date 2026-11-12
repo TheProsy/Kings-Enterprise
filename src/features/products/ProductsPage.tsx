@@ -10,6 +10,11 @@ import { Modal } from '@/components/ui/Modal';
 import { DeleteRecordButton } from '@/components/common/DeleteRecordButton';
 import { ProductForm } from '@/features/products/ProductForm';
 import { catalogueService, productService, type CatalogueItem } from '@/services';
+import {
+  DEFAULT_LOW_STOCK_THRESHOLD,
+  effectiveMinimumStock,
+  isLowStock,
+} from '@/lib/stock';
 import { toast } from '@/lib/toast';
 import { Pencil, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -27,6 +32,9 @@ export function ProductsPage() {
   const search = searchParams.get('q') ?? '';
   const [categoryFilter, setCategoryFilter] = useState('');
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [lowStockThreshold, setLowStockThreshold] = useState(
+    DEFAULT_LOW_STOCK_THRESHOLD,
+  );
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<CatalogueItem | null>(null);
@@ -39,9 +47,10 @@ export function ProductsPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const catalogue = await catalogueService.list();
+      const catalogue = await catalogueService.list({ fresh: true });
       setItems(catalogue.items);
       setCategories(catalogue.categories);
+      setLowStockThreshold(catalogue.lowStockThreshold);
     } catch (error) {
       console.error(error);
       toast('Could not load products. Please try again.', 'error');
@@ -142,7 +151,7 @@ export function ProductsPage() {
               price={item.sellingPrice}
               stock={item.quantityOnHand}
               unit={item.unit}
-              lowStock={item.active && item.quantityOnHand <= item.minimumStock}
+              lowStock={isLowStock(item, lowStockThreshold)}
               category={item.categoryName}
               onPress={() => setSelectedProduct(item)}
             />
@@ -258,7 +267,8 @@ export function ProductsPage() {
                     status={
                       selectedProduct.quantityOnHand <= 0
                         ? 'Out of Stock'
-                        : selectedProduct.quantityOnHand <= selectedProduct.minimumStock
+                        : selectedProduct.quantityOnHand <=
+                            effectiveMinimumStock(selectedProduct, lowStockThreshold)
                           ? 'Low Stock'
                           : 'In Stock'
                     }
@@ -272,7 +282,13 @@ export function ProductsPage() {
               <div className="flex justify-between border-b border-border pb-2">
                 <dt className="text-text-secondary">Minimum Stock Threshold</dt>
                 <dd className="font-semibold text-text-primary">
-                  {selectedProduct.minimumStock} {selectedProduct.unit}
+                  {effectiveMinimumStock(selectedProduct, lowStockThreshold)}{' '}
+                  {selectedProduct.unit}
+                  {selectedProduct.minimumStock <= 0 && (
+                    <span className="ml-1 text-xs font-normal text-text-muted">
+                      (store default)
+                    </span>
+                  )}
                 </dd>
               </div>
               <div className="flex justify-between border-b border-border pb-2">

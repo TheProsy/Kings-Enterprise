@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -6,87 +6,126 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/tables/DataTable';
 import { catalogueService, type CatalogueItem } from '@/services';
-import { formatMoney } from '@/lib/formatters';
+import {
+  DEFAULT_LOW_STOCK_THRESHOLD,
+  effectiveMinimumStock,
+  isLowStock,
+} from '@/lib/stock';
 import { PERMISSIONS, ROUTES } from '@/constants';
 import { useAuth } from '@/features/auth';
-import { Plus } from 'lucide-react';
+import { toast } from '@/lib/toast';
+import { AlertTriangle, RefreshCw, Truck } from 'lucide-react';
+
+function variantLabel(item: CatalogueItem) {
+  const attributeLabel = Object.entries(item.attributes || {})
+    .map(([key, value]) => `${key}: ${value}`)
+    .join(', ');
+  return item.brand || attributeLabel || 'Standard';
+}
 
 export function LowStockPage() {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const canReorder = hasPermission(PERMISSIONS.PURCHASES_CREATE);
   const [items, setItems] = useState<CatalogueItem[]>([]);
+  const [threshold, setThreshold] = useState(DEFAULT_LOW_STOCK_THRESHOLD);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    catalogueService
-      .list()
-      .then((catalogue) => {
-        if (active) setItems(catalogue.items);
-      })
-      .catch((error) => console.error(error))
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+  const loadData = useCallback(async (fresh = false) => {
+    try {
+      const catalogue = await catalogueService.list({ fresh });
+      setItems(catalogue.items);
+      setThreshold(catalogue.lowStockThreshold);
+    } catch (error) {
+      console.error(error);
+      toast('Could not load stock levels. Check your connection and try again.', 'error');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
-  const lowStock = items.filter(
-    (item) => item.active && item.quantityOnHand <= item.minimumStock,
+  useEffect(() => {
+    loadData(true);
+  }, [loadData]);
+
+  useEffect(() => {
+    const onFocus = () => loadData(true);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [loadData]);
+
+  const lowStockItems = useMemo(
+    () =>
+      items
+        .filter((item) => isLowStock(item, threshold))
+        .sort((left, right) => {
+          const leftOut = left.quantityOnHand <= 0 ? 0 : 1;
+          const rightOut = right.quantityOnHand <= 0 ? 0 : 1;
+          if (leftOut !== rightOut) return leftOut - rightOut;
+
+          const leftLimit = effectiveMinimumStock(left, threshold);
+          const rightLimit = effectiveMinimumStock(right, threshold);
+          const leftRatio = leftLimit > 0 ? left.quantityOnHand / leftLimit : 0;
+          const rightRatio = rightLimit > 0 ? right.quantityOnHand / rightLimit : 0;
+          return leftRatio - rightRatio;
+        }),
+    [items, threshold],
   );
+
+  const outOfStockCount = lowStockItems.filter((item) => item.quantityOnHand <= 0).length;
+  const runningLowCount = lowStockItems.length - outOfStockCount;
+
+  const restock = (item: CatalogueItem) => {
+    const quantity = Math.max(
+      effectiveMinimumStock(item, threshold) - item.quantityOnHand,
+      1,
+    );
+    navigate(ROUTES.APP_PURCHASES_NEW, {
+      state: { reorder: { variantId: item.id, quantity } },
+    });
+  };
+
+  const reorderLevelCopy = (item: CatalogueItem) => {
+    const level = effectiveMinimumStock(item, threshold);
+    return level > 0
+      ? `Reorder at ${level} ${item.unit}`
+      : 'No reorder level set';
+  };
 
   const columns = [
     {
-      key: 'product',
-      header: 'Product / Variation',
+      key: 'productName',
+      header: 'Item',
+      sortable: true,
       render: (item: CatalogueItem) => (
         <div>
-          <p className="font-semibold text-text-primary text-sm">{item.productName}</p>
-          <p className="text-xs text-text-muted">{item.brand ? `Brand: ${item.brand}` : 'Standard variation'}</p>
+          <p className="text-sm font-semibold text-text-primary">{item.productName}</p>
+          <p className="text-xs text-text-muted">{variantLabel(item)}</p>
         </div>
       ),
     },
     {
       key: 'status',
-      header: 'Alert Level',
+      header: 'Status',
       render: (item: CatalogueItem) => (
         <Badge variant={item.quantityOnHand <= 0 ? 'danger' : 'warning'}>
-          {item.quantityOnHand <= 0 ? 'Out of Stock' : 'Low Stock'}
+          {item.quantityOnHand <= 0 ? 'Out of stock' : 'Low stock'}
         </Badge>
       ),
     },
     {
-      key: 'stock',
-      header: 'On Hand',
-      headerClassName: 'text-right',
-      className: 'text-right',
+      key: 'quantityOnHand',
+      header: 'Stock left',
+      sortable: true,
       render: (item: CatalogueItem) => (
-        <span className="font-bold text-sm text-danger-fg">
-          {item.quantityOnHand} <span className="text-xs font-normal text-text-muted">{item.unit}</span>
-        </span>
-      ),
-    },
-    {
-      key: 'minimum',
-      header: 'Min Threshold',
-      headerClassName: 'text-right',
-      className: 'text-right',
-      render: (item: CatalogueItem) => (
-        <span className="text-sm text-text-secondary">
-          {item.minimumStock} <span className="text-xs text-text-muted">{item.unit}</span>
-        </span>
-      ),
-    },
-    {
-      key: 'sellingPrice',
-      header: 'Selling Price',
-      headerClassName: 'text-right',
-      className: 'text-right',
-      render: (item: CatalogueItem) => (
-        <span className="font-semibold text-text-primary text-sm">{formatMoney(item.sellingPrice)}</span>
+        <div>
+          <p className="text-sm font-semibold text-text-primary">
+            {item.quantityOnHand} {item.unit}
+          </p>
+          <p className="text-xs text-text-muted">{reorderLevelCopy(item)}</p>
+        </div>
       ),
     },
     {
@@ -94,86 +133,108 @@ export function LowStockPage() {
       header: '',
       headerClassName: 'text-right',
       className: 'text-right',
-      render: () => (
+      render: (item: CatalogueItem) =>
         canReorder ? (
           <Button
             size="sm"
             variant="outline"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(ROUTES.APP_PURCHASES_NEW);
+            onClick={(event) => {
+              event.stopPropagation();
+              restock(item);
             }}
           >
-            Reorder
+            Restock
           </Button>
-        ) : null
-      ),
+        ) : null,
     },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Low Stock Alerts"
-        description="Materials requiring replenishment to avoid stockouts."
+        title="Low Stock"
+        description="Items that are out of stock or at their reorder level. Restock them before they run out."
         action={
-          canReorder ? (
+          <div className="flex items-center gap-2">
             <Button
-              onClick={() => navigate(ROUTES.APP_PURCHASES_NEW)}
-              className="shadow-xs"
+              variant="outline"
+              onClick={() => {
+                setRefreshing(true);
+                loadData(true);
+              }}
+              isLoading={refreshing}
+              aria-label="Refresh stock levels"
             >
-              <Plus className="h-4 w-4 mr-1.5" />
-              Receive Stock
+              <RefreshCw className="h-4 w-4 mr-1.5" aria-hidden="true" />
+              Refresh
             </Button>
-          ) : undefined
+            {canReorder && (
+              <Button
+                onClick={() => navigate(ROUTES.APP_PURCHASES_NEW)}
+                className="shadow-xs"
+              >
+                <Truck className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                Receive Stock
+              </Button>
+            )}
+          </div>
         }
       />
 
+      {!loading && lowStockItems.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-warning/30 bg-warning-soft/50 px-4 py-3 text-sm text-text-primary">
+          <AlertTriangle className="h-4 w-4 text-warning" aria-hidden="true" />
+          <span>
+            <strong>{outOfStockCount}</strong> out of stock
+          </span>
+          <span className="text-text-muted" aria-hidden="true">
+            &middot;
+          </span>
+          <span>
+            <strong>{runningLowCount}</strong> running low
+          </span>
+          <span className="ml-auto hidden text-xs text-text-muted sm:inline">
+            Restock opens a purchase with the item already added.
+          </span>
+        </div>
+      )}
+
       <DataTable
         columns={columns}
-        data={lowStock}
+        data={lowStockItems}
         loading={loading}
-        emptyTitle="All inventory stocked up"
-        emptyMessage="Every material currently meets or exceeds its minimum required stock threshold."
+        searchPlaceholder="Search items by name or brand…"
+        caption="Items at or below their reorder level"
+        emptyTitle={items.length === 0 ? 'No products yet' : 'Everything is in stock'}
+        emptyMessage={
+          items.length === 0
+            ? 'Add products with their stock levels to start getting low-stock alerts.'
+            : 'No items are at or below their reorder level right now. They will appear here when stock runs low.'
+        }
         mobileCardRender={(item) => (
           <div className="space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h4 className="font-bold text-sm text-text-primary">{item.productName}</h4>
-                <p className="text-xs text-text-secondary mt-0.5">{item.brand || 'Standard brand'}</p>
+                <h4 className="text-sm font-bold text-text-primary">{item.productName}</h4>
+                <p className="mt-0.5 text-xs text-text-secondary">{variantLabel(item)}</p>
               </div>
               <Badge variant={item.quantityOnHand <= 0 ? 'danger' : 'warning'}>
                 {item.quantityOnHand <= 0 ? 'Out of stock' : 'Low stock'}
               </Badge>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-xs py-2 border-y border-border/60">
-              <div>
-                <span className="text-text-muted block">Remaining:</span>
-                <span className="font-bold text-danger-fg text-sm">
-                  {item.quantityOnHand} {item.unit}
-                </span>
-              </div>
-              <div className="text-right">
-                <span className="text-text-muted block">Min Threshold:</span>
-                <span className="font-medium text-text-primary text-sm">
-                  {item.minimumStock} {item.unit}
-                </span>
-              </div>
-            </div>
+            <p className="rounded-lg bg-surface-2 px-3 py-2 text-sm text-text-primary">
+              <span className="font-bold">
+                {item.quantityOnHand} {item.unit}
+              </span>{' '}
+              left &middot; {reorderLevelCopy(item).toLowerCase()}
+            </p>
 
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-sm font-bold text-text-primary">{formatMoney(item.sellingPrice)}</span>
-              {canReorder && (
-                <Button
-                  size="sm"
-                  variant="primary"
-                  onClick={() => navigate(ROUTES.APP_PURCHASES_NEW)}
-                >
-                  Reorder Stock
-                </Button>
-              )}
-            </div>
+            {canReorder && (
+              <Button size="sm" variant="outline" onClick={() => restock(item)} className="w-full">
+                Restock this item
+              </Button>
+            )}
           </div>
         )}
       />

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Input';
 import { PriceInput } from '@/components/ui/PriceInput';
@@ -7,6 +8,12 @@ import { BUSINESS_ID, categoryService, productService, variantService } from '@/
 import { fromKobo, toKobo } from '@/lib/formatters';
 import { toast } from '@/lib/toast';
 import type { Category } from '@/types';
+
+interface AttributeDraft {
+  id: string;
+  key: string;
+  value: string;
+}
 
 interface VariantDraft {
   key: string;
@@ -17,7 +24,7 @@ interface VariantDraft {
   sellingPrice: number;
   quantityOnHand: number;
   minimumStock: number;
-  attributes: Record<string, string>;
+  attributes: AttributeDraft[];
 }
 
 interface ProductFormProps {
@@ -35,7 +42,7 @@ function newVariant(): VariantDraft {
     sellingPrice: 0,
     quantityOnHand: 0,
     minimumStock: 0,
-    attributes: {},
+    attributes: [],
   };
 }
 
@@ -86,7 +93,13 @@ export function ProductForm({ productId, onClose, onSuccess }: ProductFormProps)
               sellingPrice: fromKobo(variant.sellingPrice ?? 0),
               quantityOnHand: variant.quantityOnHand ?? 0,
               minimumStock: variant.minimumStock ?? 0,
-              attributes: variant.attributes || {},
+              attributes: Object.entries(variant.attributes || {}).map(
+                ([key, value]) => ({
+                  id: crypto.randomUUID(),
+                  key,
+                  value: String(value ?? ''),
+                }),
+              ),
             })),
           );
         }
@@ -123,6 +136,69 @@ export function ProductForm({ productId, onClose, onSuccess }: ProductFormProps)
     setVariants((current) => current.filter((entry) => entry.key !== variant.key));
   };
 
+  const addAttribute = (variantKey: string) => {
+    setVariants((current) =>
+      current.map((variant) =>
+        variant.key === variantKey
+          ? {
+              ...variant,
+              attributes: [
+                ...variant.attributes,
+                { id: crypto.randomUUID(), key: '', value: '' },
+              ],
+            }
+          : variant,
+      ),
+    );
+  };
+
+  const updateAttribute = (
+    variantKey: string,
+    attributeId: string,
+    field: 'key' | 'value',
+    value: string,
+  ) => {
+    setVariants((current) =>
+      current.map((variant) =>
+        variant.key === variantKey
+          ? {
+              ...variant,
+              attributes: variant.attributes.map((attribute) =>
+                attribute.id === attributeId
+                  ? { ...attribute, [field]: value }
+                  : attribute,
+              ),
+            }
+          : variant,
+      ),
+    );
+  };
+
+  const removeAttribute = (variantKey: string, attributeId: string) => {
+    setVariants((current) =>
+      current.map((variant) =>
+        variant.key === variantKey
+          ? {
+              ...variant,
+              attributes: variant.attributes.filter(
+                (attribute) => attribute.id !== attributeId,
+              ),
+            }
+          : variant,
+      ),
+    );
+  };
+
+  const attributesToRecord = (attributes: AttributeDraft[]) => {
+    const record: Record<string, string> = {};
+    for (const attribute of attributes) {
+      const key = attribute.key.trim();
+      const value = attribute.value.trim();
+      if (key && value) record[key] = value;
+    }
+    return record;
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!name.trim()) {
@@ -149,7 +225,7 @@ export function ProductForm({ productId, onClose, onSuccess }: ProductFormProps)
         for (const variant of validVariants) {
           const payload = {
             brand: variant.brand.trim(),
-            attributes: variant.attributes,
+            attributes: attributesToRecord(variant.attributes),
             unit: variant.unit.trim(),
             costPrice: toKobo(variant.costPrice),
             sellingPrice: toKobo(variant.sellingPrice),
@@ -190,7 +266,7 @@ export function ProductForm({ productId, onClose, onSuccess }: ProductFormProps)
             businessId: BUSINESS_ID,
             productId: id,
             brand: variant.brand.trim(),
-            attributes: variant.attributes,
+            attributes: attributesToRecord(variant.attributes),
             unit: variant.unit.trim(),
             costPrice: toKobo(variant.costPrice),
             sellingPrice: toKobo(variant.sellingPrice),
@@ -325,7 +401,77 @@ export function ProductForm({ productId, onClose, onSuccess }: ProductFormProps)
                       parseInt(event.target.value, 10) || 0,
                     )
                   }
+                  helper="Stock at or below this level shows as low. Leave 0 to use the default from Settings."
                 />
+              </div>
+              <div className="space-y-2 border-t border-border pt-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                      Specifications
+                    </p>
+                    <p className="text-2xs text-text-muted">
+                      Sizes, grades or finishes customers can choose.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => addAttribute(variant.key)}
+                  >
+                    + Add Spec
+                  </Button>
+                </div>
+                {variant.attributes.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-text-muted">
+                    No specifications yet. Example: Grade 42.5R, Weight 50kg.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {variant.attributes.map((attribute) => (
+                      <div
+                        key={attribute.id}
+                        className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start"
+                      >
+                        <Input
+                          aria-label="Specification name"
+                          placeholder="Name (e.g. Grade)"
+                          value={attribute.key}
+                          onChange={(event) =>
+                            updateAttribute(
+                              variant.key,
+                              attribute.id,
+                              'key',
+                              event.target.value,
+                            )
+                          }
+                        />
+                        <Input
+                          aria-label="Specification value"
+                          placeholder="Value (e.g. 42.5R)"
+                          value={attribute.value}
+                          onChange={(event) =>
+                            updateAttribute(
+                              variant.key,
+                              attribute.id,
+                              'value',
+                              event.target.value,
+                            )
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeAttribute(variant.key, attribute.id)}
+                          className="mt-0.5 justify-self-start rounded-md p-2.5 text-text-muted transition-colors hover:bg-danger-soft hover:text-danger sm:justify-self-auto"
+                          aria-label="Remove specification"
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}

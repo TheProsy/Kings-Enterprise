@@ -2,14 +2,20 @@ import { useCallback, useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable, type Column } from '@/components/tables/DataTable';
+import { DeleteRecordButton } from '@/components/common/DeleteRecordButton';
 import { stockService } from '@/services';
 import { formatDateTime } from '@/lib/formatters';
+import { toast } from '@/lib/toast';
+import { ROLES } from '@/constants';
+import { useAuth } from '@/features/auth';
 import type { StockMovement } from '@/types';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 
 type MovementBadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'outline';
 
 export function StockHistoryPage() {
+  const { user } = useAuth();
+  const canDelete = user?.role === ROLES.OWNER;
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,6 +25,7 @@ export function StockHistoryPage() {
       setMovements(data);
     } catch (err) {
       console.error(err);
+      toast('Could not load stock history. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -27,6 +34,11 @@ export function StockHistoryPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const removeMovement = async (movement: StockMovement) => {
+    await stockService.remove(movement.id);
+    setMovements((current) => current.filter((entry) => entry.id !== movement.id));
+  };
 
   const typeLabels: Record<string, string> = {
     Purchase: 'Stock In',
@@ -119,11 +131,29 @@ export function StockHistoryPage() {
     },
   ];
 
+  if (canDelete) {
+    columns.push({
+      key: 'actions',
+      header: '',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      render: (m) => (
+        <DeleteRecordButton
+          entityLabel="Stock history record"
+          recordLabel={`${typeLabels[m.movementType] ?? m.movementType} — ${m.productName}`}
+          description="Only this history entry is removed. Current stock levels and linked sales or purchases are unchanged."
+          showLabel={false}
+          onDelete={() => removeMovement(m)}
+        />
+      ),
+    });
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Stock Movement History"
-        description="Audit log of incoming shipments, sales deductions, and inventory adjustments."
+        description="Every stock change, in and out. Only the store owner can delete a history entry."
       />
 
       <DataTable
@@ -159,6 +189,16 @@ export function StockHistoryPage() {
                 {m.quantityChange > 0 ? `+${m.quantityChange}` : m.quantityChange}
               </span>
             </div>
+            {canDelete && (
+              <div className="flex justify-end border-t border-border/60 pt-2">
+                <DeleteRecordButton
+                  entityLabel="Stock history record"
+                  recordLabel={`${typeLabels[m.movementType] ?? m.movementType} — ${m.productName}`}
+                  description="Only this history entry is removed. Current stock levels and linked sales or purchases are unchanged."
+                  onDelete={() => removeMovement(m)}
+                />
+              </div>
+            )}
           </div>
         )}
       />

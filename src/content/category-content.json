@@ -134,5 +134,81 @@
         "answer": "Call or WhatsApp to confirm availability and current pricing. Reservations depend on stock and the product."
       }
     ]
+  },
+  "aggregates": {
+    "intro": "Sand, laterite and granite are sold by trip or tonne depending on the material and quantity. Confirm the type, quantity and delivery access before ordering, especially for large site deliveries. Prices vary with haulage and supply, so ask for a current quote.",
+    "buyingTips": [
+      "Confirm whether the rate is per trip or per tonne.",
+      "State the delivery location and access before ordering.",
+      "Order the correct grade of sand or granite for the work.",
+      "Allow for settling, spillage and wastage when estimating quantities."
+    ],
+    "faqs": [
+      {
+        "question": "Do you deliver sand and granite?",
+        "answer": "Delivery is arranged according to the quantity, vehicle access and location. Send your site address and required quantity so we can confirm the current delivery arrangement."
+      },
+      {
+        "question": "How much does a trip of sand cover?",
+        "answer": "Trip sizes vary by vehicle and supplier. Confirm the stated tonnage or volume before comparing prices."
+      }
+    ]
+  },
+  "plumbing": {
+    "intro": "Plumbing materials must match the water system, pipe sizes and fixtures in the building. Our range includes common PVC pipes, tanks and fittings, subject to stock. Ask your plumber to confirm the sizes and pressure rating before you buy in bulk.",
+    "buyingTips": [
+      "Confirm pipe diameter, length and pressure rating.",
+      "Choose a tank capacity that matches daily water use.",
+      "Check that fittings and pipes are compatible.",
+      "Pressure-test installations before closing walls or floors."
+    ],
+    "faqs": [
+      {
+        "question": "Can you help me choose a water tank size?",
+        "answer": "Tell us the number of occupants, daily use and how often water is supplied. We can confirm the tank capacities available at the depot."
+      },
+      {
+        "question": "Are pipe fittings sold separately?",
+        "answer": "Availability varies by size and type. Send your plumbing list so we can confirm the pipes, fittings and accessories in stock."
+      }
+    ]
+  },
+  "electrical": {
+    "intro": "Electrical materials should be selected for the load, installation method and applicable standards. We supply common cables, conduits, switches and sockets subject to stock. Always use a qualified electrician for design, installation and testing.",
+    "buyingTips": [
+      "Confirm cable conductor size and insulation type.",
+      "Match conduit diameter to the number of cables.",
+      "Choose switches and sockets with the correct current rating.",
+      "Have the installation tested by a qualified electrician."
+    ],
+    "faqs": [
+      {
+        "question": "Which cable size should I use?",
+        "answer": "Cable size depends on the load, circuit length and installation method. Ask a qualified electrician to specify the correct size for your project."
+      },
+      {
+        "question": "Do you sell conduit pipes and accessories?",
+        "answer": "Conduit pipes are available in common diameters, subject to stock. Confirm the size, length and accessories required for your installation."
+      }
+    ]
+  },
+  "finishing": {
+    "intro": "Tiles and finishing materials determine both the look and durability of a space. Confirm tile size, finish, shade and coverage per box before ordering. Buy enough for cuts and wastage, and keep a few spare tiles from the same batch for future repairs.",
+    "buyingTips": [
+      "Measure the area and add an allowance for cuts and wastage.",
+      "Confirm the coverage stated on each box.",
+      "Check tile shade and caliber before bulk purchase.",
+      "Buy compatible adhesive and grout for the tile type."
+    ],
+    "faqs": [
+      {
+        "question": "How many boxes of tiles do I need?",
+        "answer": "Divide the total area by the coverage per box, then add an allowance for cuts and wastage. Confirm the coverage with the sales desk before ordering."
+      },
+      {
+        "question": "Can I order tile adhesive and grout with the tiles?",
+        "answer": "Availability varies. Send your tile quantity and surface type so we can confirm the suitable adhesive and grout options."
+      }
+    ]
   }
 }

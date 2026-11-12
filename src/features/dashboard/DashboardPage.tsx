@@ -19,6 +19,11 @@ import {
   PiggyBank,
 } from 'lucide-react';
 import { formatMoney, formatDate } from '@/lib/formatters';
+import {
+  DEFAULT_LOW_STOCK_THRESHOLD,
+  effectiveMinimumStock,
+  isLowStock,
+} from '@/lib/stock';
 import { useAuth } from '@/features/auth';
 import { ROUTES, PERMISSIONS, buildRoute } from '@/constants';
 import { catalogueService, paymentService, saleService } from '@/services';
@@ -55,6 +60,9 @@ export function DashboardPage() {
   const [moneyReceived, setMoneyReceived] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
   const [lowStock, setLowStock] = useState<CatalogueItem[]>([]);
+  const [lowStockThreshold, setLowStockThreshold] = useState(
+    DEFAULT_LOW_STOCK_THRESHOLD,
+  );
   const [recentSales, setRecentSales] = useState<Sale[]>([]);
   const [salesByDay, setSalesByDay] = useState<DailyPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +70,7 @@ export function DashboardPage() {
   const loadData = useCallback(async () => {
     try {
       const [catalogue, sales, payments] = await Promise.all([
-        catalogueService.list(),
+        catalogueService.list({ fresh: true }),
         saleService.list(),
         paymentService.list(),
       ]);
@@ -92,10 +100,9 @@ export function DashboardPage() {
       setTodayRevenue(revenue);
       setMoneyReceived(received);
       setTotalProducts(new Set(catalogue.items.map((item) => item.productId)).size);
+      setLowStockThreshold(catalogue.lowStockThreshold);
       setLowStock(
-        catalogue.items.filter(
-          (item) => item.active && item.quantityOnHand <= item.minimumStock,
-        ),
+        catalogue.items.filter((item) => isLowStock(item, catalogue.lowStockThreshold)),
       );
       setRecentSales(sales.slice(0, 6));
 
@@ -398,7 +405,7 @@ export function DashboardPage() {
             <div className="flex items-start justify-between gap-3 pb-3">
               <h2 className="flex items-center gap-2 text-base font-semibold text-text-primary">
                 <AlertTriangle className="h-4 w-4 text-warning" aria-hidden="true" />
-                Low Stock Items
+                Low stock
               </h2>
               <NavLink
                 to={ROUTES.APP_PRODUCT_LOW_STOCK}
@@ -414,7 +421,7 @@ export function DashboardPage() {
                   <li key={item.id}>
                     <button
                       type="button"
-                      onClick={() => navigate(ROUTES.APP_PRODUCTS)}
+                      onClick={() => navigate(ROUTES.APP_PRODUCT_LOW_STOCK)}
                       className="flex w-full items-center justify-between gap-3 px-1 py-3 text-left transition-colors hover:bg-surface-2"
                     >
                       <span className="min-w-0 flex-1">
@@ -423,14 +430,17 @@ export function DashboardPage() {
                         </span>
                         <span className="mt-0.5 block truncate text-xs text-text-muted">
                           {item.brand ? `${item.brand} · ` : ''}
-                          {item.quantityOnHand} {item.unit} left (min {item.minimumStock})
+                          {item.quantityOnHand} {item.unit} left
+                          {effectiveMinimumStock(item, lowStockThreshold) > 0
+                            ? ` · reorder at ${effectiveMinimumStock(item, lowStockThreshold)} ${item.unit}`
+                            : ''}
                         </span>
                       </span>
                       <Badge
                         variant={item.quantityOnHand <= 0 ? 'danger' : 'warning'}
                         size="sm"
                       >
-                        {item.quantityOnHand <= 0 ? 'Out' : 'Low'}
+                        {item.quantityOnHand <= 0 ? 'Out of stock' : 'Low stock'}
                       </Badge>
                     </button>
                   </li>
@@ -445,7 +455,7 @@ export function DashboardPage() {
                 </div>
                 <p className="text-sm font-semibold text-text-primary">Inventory in good shape</p>
                 <p className="mt-0.5 text-xs text-text-muted">
-                  No products are currently below their threshold.
+                  No products are at or below their reorder level right now.
                 </p>
               </div>
             )}

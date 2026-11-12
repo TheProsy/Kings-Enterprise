@@ -230,7 +230,7 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------------
-    // Inventory & stock (immutable audit log)
+    // Inventory & stock movement history
     // ------------------------------------------------------------------
     match /businesses/{businessId}/stockMovements/{movementId} {
       allow read: if isBusinessMember(businessId);

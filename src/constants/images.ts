@@ -18,6 +18,7 @@ export const PAGE_IMAGES = {
 
 export const CATEGORY_IMAGE_MAP: Record<string, string> = {
   'Cement & Aggregates': '/images/categories/cement.jpg',
+  'Cement & Building Materials': '/images/categories/cement.jpg',
   'Cement': '/images/categories/cement.jpg',
   'TMT Iron Rods & Steel': '/images/categories/steel.jpg',
   'Iron Rods': '/images/categories/steel.jpg',
@@ -25,17 +26,26 @@ export const CATEGORY_IMAGE_MAP: Record<string, string> = {
   'Timber': '/images/categories/timber.jpg',
   'Wood': '/images/categories/timber.jpg',
   'Roofing Sheets & Ceilings': '/images/categories/roofing.jpg',
+  'Roofing & Ceiling': '/images/categories/roofing.jpg',
   'Roofing': '/images/categories/roofing.jpg',
   'Ceiling': '/images/categories/roofing.jpg',
   'Plumbing & PVC Pipes': '/images/categories/plumbing.jpg',
+  'Plumbing & Pipes': '/images/categories/plumbing.jpg',
   'Plumbing': '/images/categories/plumbing.jpg',
   'Wire Mesh & Nails': '/images/categories/nails-wire.jpg',
+  'Nails & Hardware': '/images/categories/nails-wire.jpg',
   'Wire Mesh, Binding Wire & Nails': '/images/categories/nails-wire.jpg',
   'Nails': '/images/categories/nails-wire.jpg',
   'Binding': '/images/categories/nails-wire.jpg',
   'Paints & Finishes': '/images/categories/paints.jpg',
+  'Painting Materials': '/images/categories/paints.jpg',
   'Paint': '/images/categories/paints.jpg',
+  'Construction Tools & Equipment': '/images/categories/tools.jpg',
   'Construction Tools & Hardware': '/images/categories/tools.jpg',
+  'Ropes & Measuring': '/images/categories/tools.jpg',
+  'Electrical & Lighting': '/images/categories/tools.jpg',
+  'Sand, Granite & Aggregates': '/images/categories/cement.jpg',
+  'Tiles & Finishing': '/images/categories/paints.jpg',
   'Tools': '/images/categories/tools.jpg',
 };
 
@@ -104,6 +114,18 @@ export function getProductImage(productName?: string, categoryName?: string): st
   }
   if (nameLower.includes('roofing') || nameLower.includes('long span') || nameLower.includes('aluminium')) {
     return '/images/products/roofing-sheet-longspan.jpg';
+  }
+  if (nameLower.includes('conduit')) {
+    return '/images/categories/tools.jpg';
+  }
+  if (nameLower.includes('pipe') || nameLower.includes('tank')) {
+    return '/images/categories/plumbing.jpg';
+  }
+  if (nameLower.includes('cable') || nameLower.includes('switch') || nameLower.includes('socket')) {
+    return '/images/categories/tools.jpg';
+  }
+  if (nameLower.includes('tile')) {
+    return '/images/categories/paints.jpg';
   }
   if (nameLower.includes('pvc') || nameLower.includes('ceiling')) {
     return '/images/products/pvc-ceiling-panels.jpg';

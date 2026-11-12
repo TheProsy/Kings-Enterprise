@@ -5,6 +5,12 @@ import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { DataTable, type Column } from '@/components/tables/DataTable';
 import { catalogueService, type CatalogueItem } from '@/services';
+import {
+  DEFAULT_LOW_STOCK_THRESHOLD,
+  effectiveMinimumStock,
+  isLowStock,
+  stockStatus,
+} from '@/lib/stock';
 import { formatMoney } from '@/lib/formatters';
 import { toast } from '@/lib/toast';
 import { Package, AlertTriangle, Layers, DollarSign, Printer, ArrowLeft } from 'lucide-react';
@@ -13,14 +19,18 @@ import { ROUTES } from '@/constants';
 
 export function StockReportPage() {
   const [items, setItems] = useState<CatalogueItem[]>([]);
+  const [threshold, setThreshold] = useState(DEFAULT_LOW_STOCK_THRESHOLD);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     catalogueService
-      .list()
+      .list({ fresh: true })
       .then((catalogue) => {
-        if (active) setItems(catalogue.items);
+        if (active) {
+          setItems(catalogue.items);
+          setThreshold(catalogue.lowStockThreshold);
+        }
       })
       .catch((error) => {
         console.error(error);
@@ -40,13 +50,11 @@ export function StockReportPage() {
     (sum, item) => sum + item.costPrice * item.quantityOnHand,
     0,
   );
-  const lowStockItems = items.filter(
-    (item) => item.active && item.quantityOnHand <= item.minimumStock,
-  );
+  const lowStockItems = items.filter((item) => isLowStock(item, threshold));
 
   const columns: Column<CatalogueItem>[] = [
     {
-      header: 'Product Name',
+      header: 'Product',
       accessor: (item) => (
         <div>
           <span className="font-semibold text-text-primary block">{item.productName}</span>
@@ -57,7 +65,7 @@ export function StockReportPage() {
       sortable: true,
     },
     {
-      header: 'Variant / Specification',
+      header: 'Variation',
       accessor: (item) => (
         <span className="text-sm text-text-secondary">
           {item.brand ||
@@ -69,7 +77,7 @@ export function StockReportPage() {
       ),
     },
     {
-      header: 'On Hand',
+      header: 'Stock left',
       accessor: (item) => (
         <span className="text-sm font-bold text-text-primary">
           {item.quantityOnHand} <span className="text-xs font-normal text-text-secondary">{item.unit}</span>
@@ -78,15 +86,15 @@ export function StockReportPage() {
       sortable: true,
     },
     {
-      header: 'Min Threshold',
+      header: 'Reorder level',
       accessor: (item) => (
         <span className="text-sm text-text-secondary font-mono">
-          {item.minimumStock} {item.unit}
+          {effectiveMinimumStock(item, threshold)} {item.unit}
         </span>
       ),
     },
     {
-      header: 'Valuation (Cost)',
+      header: 'Value (cost)',
       accessor: (item) => (
         <span className="text-sm font-bold text-text-primary">
           {formatMoney(item.costPrice * item.quantityOnHand)}
@@ -95,22 +103,21 @@ export function StockReportPage() {
       sortable: true,
     },
     {
-      header: 'Inventory Status',
+      header: 'Status',
       accessor: (item) => {
-        const isOutOfStock = item.quantityOnHand <= 0;
-        const isLow = item.quantityOnHand <= item.minimumStock;
+        const status = stockStatus(item, threshold);
         const variant = !item.active
           ? 'neutral'
-          : isOutOfStock
+          : status === 'out'
             ? 'danger'
-            : isLow
+            : status === 'low'
               ? 'warning'
               : 'success';
         const label = !item.active
           ? 'Inactive'
-          : isOutOfStock
+          : status === 'out'
             ? 'Out of Stock'
-            : isLow
+            : status === 'low'
               ? 'Low Stock'
               : 'In Stock';
         return <StatusBadge status={label} variant={variant} />;
@@ -122,8 +129,8 @@ export function StockReportPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <PageHeader
-          title="Stock Valuation & Inventory Report"
-          description="Live balance of warehouse inventory, reorder thresholds, and current asset valuation."
+          title="Stock Report"
+          description="See what you have in stock, what needs reordering, and what your inventory is worth."
           breadcrumbs={[
             { label: 'Reports', href: ROUTES.APP_REPORTS },
             { label: 'Stock Report' },
@@ -146,45 +153,44 @@ export function StockReportPage() {
       {/* KPI Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Catalogued Products"
+          label="Products"
           value={productCount.toString()}
           icon={<Package className="w-5 h-5" />}
-          description="Distinct product lines"
+          description="Product lines in your catalogue"
         />
         <StatCard
-          label="Tracked SKUs / Items"
+          label="Stock items"
           value={items.length.toString()}
           icon={<Layers className="w-5 h-5" />}
-          description="Active variant items"
+          description="Variations you currently sell"
         />
         <StatCard
-          label="Low Stock Alerts"
+          label="Low stock"
           value={lowStockItems.length.toString()}
           icon={<AlertTriangle className="w-5 h-5" />}
           variant={lowStockItems.length > 0 ? 'warning' : 'default'}
-          description="Items at or below minimum"
+          description="Items at or below their reorder level"
         />
         <StatCard
-          label="Total Inventory Value"
+          label="Inventory value"
           value={formatMoney(totalStockValue)}
           icon={<DollarSign className="w-5 h-5" />}
-          description="Calculated at unit cost"
+          description="Based on cost price"
         />
       </div>
 
       {/* Inventory Table */}
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-text-primary">Inventory Valuation List</h3>
+        <h3 className="text-lg font-bold text-text-primary">All inventory</h3>
         <DataTable
           columns={columns}
           data={items}
           loading={loading}
-          searchPlaceholder="Search materials by name or brand..."
+          searchPlaceholder="Search by product name or brand…"
           emptyTitle="No stock items found"
-          emptyDescription="There are no materials in the inventory catalog."
+          emptyDescription="Your catalogue is empty. Add products to start tracking stock."
           mobileCardRender={(item) => {
-            const isOutOfStock = item.quantityOnHand <= 0;
-            const isLow = item.quantityOnHand <= item.minimumStock;
+            const status = stockStatus(item, threshold);
             return (
               <div className="p-4 space-y-2.5">
                 <div className="flex items-start justify-between">
@@ -196,18 +202,18 @@ export function StockReportPage() {
                     status={
                       !item.active
                         ? 'Inactive'
-                        : isOutOfStock
+                        : status === 'out'
                           ? 'Out of Stock'
-                          : isLow
+                          : status === 'low'
                             ? 'Low Stock'
                             : 'In Stock'
                     }
                     variant={
                       !item.active
                         ? 'neutral'
-                        : isOutOfStock
+                        : status === 'out'
                           ? 'danger'
-                          : isLow
+                          : status === 'low'
                             ? 'warning'
                             : 'success'
                     }

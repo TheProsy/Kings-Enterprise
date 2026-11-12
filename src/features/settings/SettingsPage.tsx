@@ -11,6 +11,7 @@ import { BUSINESS } from '@/config/business';
 import { PERMISSIONS, ROUTES } from '@/constants';
 import { useAuth } from '@/features/auth';
 import { DEFAULT_RECEIPT_SETTINGS, normalizeReceiptSettings } from '@/lib/receipts';
+import { DEFAULT_LOW_STOCK_THRESHOLD } from '@/lib/stock';
 import { toast } from '@/lib/toast';
 import { useTheme } from '@/contexts/useTheme';
 import { cn } from '@/lib/utilities';
@@ -28,7 +29,6 @@ interface GeneralSettings {
 interface InventorySettings {
   currency: string;
   lowStockThreshold: number;
-  autoDeactivate: boolean;
 }
 
 interface PaymentSettings {
@@ -49,8 +49,7 @@ const DEFAULT_RECEIPT: ReceiptConfig = DEFAULT_RECEIPT_SETTINGS;
 
 const DEFAULT_INVENTORY: InventorySettings = {
   currency: 'NGN',
-  lowStockThreshold: 5,
-  autoDeactivate: false,
+  lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
 };
 
 const DEFAULT_PAYMENTS: PaymentSettings = {
@@ -460,15 +459,16 @@ export function SettingsPage() {
             <Card variant="soft" className="p-6 shadow-sm space-y-5">
               <CardHeader className="p-0 pb-3 border-b border-border/60">
                 <CardTitle className="text-base font-bold text-text-primary">
-                  Inventory & Stock Thresholds
+                  Stock Alerts
                 </CardTitle>
                 <CardDescription>
-                  Define standard reorder thresholds and stock policies.
+                  Set the default reorder level for products that do not have their own
+                  minimum stock.
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0 space-y-4">
                 <Input
-                  label="Default Minimum Stock Alert Threshold"
+                  label="Default reorder level"
                   type="number"
                   min="0"
                   value={inventory.lowStockThreshold}
@@ -478,7 +478,7 @@ export function SettingsPage() {
                       lowStockThreshold: parseInt(e.target.value) || 0,
                     })
                   }
-                  helper="Items with stock at or below this value trigger low-stock alerts."
+                  helper="Items at or below this level appear in Low Stock. Products with their own minimum stock use that value instead."
                 />
                 <div className="flex justify-end pt-3 border-t border-border/60">
                   {canEdit && (
@@ -552,7 +552,13 @@ export function SettingsPage() {
                   {canEdit && (
                     <Button
                       variant="primary"
-                      onClick={() => saveSettings('payments', payments)}
+                      onClick={() => {
+                        if (!payments.cash && !payments.transfer && !payments.pos) {
+                          toast('Keep at least one payment option on.', 'warning');
+                          return;
+                        }
+                        saveSettings('payments', payments);
+                      }}
                       isLoading={saving}
                       className="shadow-xs font-semibold"
                     >

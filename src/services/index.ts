@@ -29,7 +29,7 @@ import {
 } from 'firebase/auth';
 import { deleteApp, initializeApp } from 'firebase/app';
 import { auth, db, firebaseConfig } from '@/lib/firebase/config';
-import { User, Category, Product, ProductVariant, Customer, Supplier, Sale, Purchase, Expense, StockMovement, AuditLog, Payment, Settings, Receipt } from '@/types';
+import { User, Category, Product, ProductVariant, Customer, Supplier, Sale, Purchase, Expense, StockMovement, AuditLog, Payment, Settings, Receipt, PaymentMethod } from '@/types';
 import {
   createSaleReceipt,
   recordSalePayment,
@@ -42,6 +42,8 @@ import type {
   VoidReceiptInput,
 } from '@/lib/receiptIssuing';
 import { generateId } from '@/lib/formatters';
+import { normalizeLowStockThreshold } from '@/lib/stock';
+import { PAYMENT_METHODS } from '@/constants';
 import { BUSINESS } from '@/config/business';
 
 export type {
@@ -206,6 +208,7 @@ export const settingsService = {
       },
       { merge: true },
     );
+    catalogueService.invalidate();
   },
 
   /** Merges one or more settings sections into the stored settings document. */
@@ -222,6 +225,7 @@ export const settingsService = {
       },
       { merge: true },
     );
+    catalogueService.invalidate();
   },
 };
 
@@ -238,16 +242,20 @@ export const categoryService = {
   async create(data: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>) {
     const id = generateId();
     await setDoc(doc(db, `businesses/${BUSINESS_ID}/categories/${id}`), { ...data, id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    catalogueService.invalidate();
     return id;
   },
   async update(id: string, data: Partial<Category>) {
     await updateDoc(doc(db, `businesses/${BUSINESS_ID}/categories/${id}`), { ...data, updatedAt: serverTimestamp() });
+    catalogueService.invalidate();
   },
   async deactivate(id: string) {
     await updateDoc(doc(db, `businesses/${BUSINESS_ID}/categories/${id}`), { active: false, updatedAt: serverTimestamp() });
+    catalogueService.invalidate();
   },
   async remove(id: string) {
     await deleteDoc(businessDoc(`categories/${id}`));
+    catalogueService.invalidate();
     await recordDeletionAudit('category', id);
   },
 };
@@ -266,6 +274,7 @@ export const productService = {
   async create(data: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) {
     const id = generateId();
     await setDoc(doc(db, `businesses/${BUSINESS_ID}/products/${id}`), { ...data, id, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    catalogueService.invalidate();
     return id;
   },
   async update(id: string, data: Partial<Product>) {
@@ -273,9 +282,11 @@ export const productService = {
       Object.entries(data).filter(([, value]) => value !== undefined),
     );
     await updateDoc(doc(db, `businesses/${BUSINESS_ID}/products/${id}`), { ...payload, updatedAt: serverTimestamp() });
+    catalogueService.invalidate();
   },
   async deactivate(id: string) {
     await updateDoc(doc(db, `businesses/${BUSINESS_ID}/products/${id}`), { active: false, updatedAt: serverTimestamp() });
+    catalogueService.invalidate();
   },
   async remove(id: string) {
     const variantsSnap = await getDocs(
@@ -285,6 +296,7 @@ export const productService = {
     variantsSnap.forEach((variantDoc) => batch.delete(variantDoc.ref));
     batch.delete(businessDoc(`products/${id}`));
     await batch.commit();
+    catalogueService.invalidate();
     await recordDeletionAudit('product', id, { variants: variantsSnap.size });
   },
 };
@@ -302,10 +314,12 @@ export const variantService = {
   async create(productId: string, data: Omit<ProductVariant, 'id' | 'createdAt' | 'updatedAt'>) {
     const id = generateId();
     await setDoc(doc(db, `businesses/${BUSINESS_ID}/products/${productId}/variants/${id}`), { ...data, id, productId, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    catalogueService.invalidate();
     return id;
   },
   async update(productId: string, variantId: string, data: Partial<ProductVariant>) {
     await updateDoc(doc(db, `businesses/${BUSINESS_ID}/products/${productId}/variants/${variantId}`), { ...data, updatedAt: serverTimestamp() });
+    catalogueService.invalidate();
   },
 };
 
@@ -457,6 +471,7 @@ export const saleService = {
     });
 
     await recordDeletionAudit('sale', id);
+    catalogueService.invalidate();
   },
 };
 
@@ -533,6 +548,7 @@ export const purchaseService = {
     });
 
     await recordDeletionAudit('purchase', id);
+    catalogueService.invalidate();
   },
 };
 
@@ -591,7 +607,9 @@ export const checkoutService = {
     employeeName: string;
     notes?: string;
   }) {
-    return createSaleReceipt(input);
+    const result = await createSaleReceipt(input);
+    catalogueService.invalidate();
+    return result;
   },
 
   async receiveStock(input: {
@@ -616,7 +634,7 @@ export const checkoutService = {
   }) {
     const idempotencyRef = doc(db, `businesses/${BUSINESS_ID}/idempotency/${input.idempotencyKey}`);
 
-    return await runTransaction(db, async (tx) => {
+    const result = await runTransaction(db, async (tx) => {
       const idempotencySnap = await tx.get(idempotencyRef);
       if (idempotencySnap.exists()) {
         const data = idempotencySnap.data();
@@ -746,6 +764,9 @@ export const checkoutService = {
         purchase: { purchaseId, purchaseNumber, total: totalCost, balanceOwed },
       };
     });
+
+    catalogueService.invalidate();
+    return result;
   },
 
   /** Alias of `receiveStock` used by the purchase entry screens. */
@@ -903,11 +924,15 @@ export const receiptService = {
   },
 
   async createReturn(input: ReturnReceiptInput) {
-    return createSaleReturn(input);
+    const result = await createSaleReturn(input);
+    catalogueService.invalidate();
+    return result;
   },
 
   async voidSale(input: VoidReceiptInput) {
-    return voidSale(input);
+    const result = await voidSale(input);
+    catalogueService.invalidate();
+    return result;
   },
 };
 
@@ -921,6 +946,11 @@ export const stockService = {
     );
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as StockMovement));
+  },
+  /** Owner-only. Removes the history entry; stock levels are not changed. */
+  async remove(movementId: string) {
+    await deleteDoc(businessDoc(`stockMovements/${movementId}`));
+    await recordDeletionAudit('stockMovement', movementId);
   },
 };
 
@@ -950,6 +980,8 @@ interface CatalogueSnapshot {
   products: Product[];
   categories: Category[];
   items: CatalogueItem[];
+  lowStockThreshold: number;
+  paymentMethods: PaymentMethod[];
 }
 
 const CATALOGUE_CACHE_MS = 60_000;
@@ -957,11 +989,30 @@ let catalogueCache: { snapshot: CatalogueSnapshot; expiresAt: number } | null = 
 let catalogueRequest: Promise<CatalogueSnapshot> | null = null;
 
 async function loadCatalogue(): Promise<CatalogueSnapshot> {
-  const [products, categories, variantsSnapshot] = await Promise.all([
+  const settingsPromise = auth.currentUser
+    ? settingsService.get().catch(() => null)
+    : Promise.resolve(null);
+  const [products, categories, variantsSnapshot, settings] = await Promise.all([
     productService.list(),
     categoryService.list(),
     getDocs(collectionGroup(db, 'variants')),
+    settingsPromise,
   ]);
+  const lowStockThreshold = normalizeLowStockThreshold(
+    (settings as Settings | null)?.inventory?.lowStockThreshold,
+  );
+  const paymentFlags: Record<PaymentMethod, boolean> = {
+    cash: true,
+    transfer: true,
+    pos: true,
+    mixed: false,
+    ...((settings as Settings | null)?.payments as
+      | Partial<Record<PaymentMethod, boolean>>
+      | undefined),
+  };
+  const enabledPaymentMethods = PAYMENT_METHODS.filter(
+    (method) => paymentFlags[method.value],
+  ).map((method) => method.value);
   const categoryNames = new Map(categories.map((c) => [c.id, c.name]));
   const productsById = new Map(products.map((product) => [product.id, product]));
 
@@ -990,7 +1041,14 @@ async function loadCatalogue(): Promise<CatalogueSnapshot> {
     ];
   });
 
-  return { products, categories, items };
+  return {
+    products,
+    categories,
+    items,
+    lowStockThreshold,
+    paymentMethods:
+      enabledPaymentMethods.length > 0 ? enabledPaymentMethods : ['cash'],
+  };
 }
 
 export const catalogueService = {
@@ -999,8 +1057,8 @@ export const catalogueService = {
     catalogueCache = null;
   },
 
-  async list(): Promise<CatalogueSnapshot> {
-    if (catalogueCache && catalogueCache.expiresAt > Date.now()) {
+  async list(options: { fresh?: boolean } = {}): Promise<CatalogueSnapshot> {
+    if (!options.fresh && catalogueCache && catalogueCache.expiresAt > Date.now()) {
       return catalogueCache.snapshot;
     }
 

@@ -26,7 +26,7 @@ const PAGE_TITLES: Array<[string, string]> = [
   ['/sales/new', 'New Sale (POS)'],
   ['/sales', 'Sales Management'],
   ['/receipts', 'Receipts & Documents'],
-  ['/products/low-stock', 'Low Stock Materials'],
+  ['/products/low-stock', 'Low Stock'],
   ['/products/stock-history', 'Stock Movement History'],
   ['/products', 'Inventory & Stock'],
   ['/purchases', 'Purchases & Receiving'],
