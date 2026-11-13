@@ -17,6 +17,7 @@ import {
   Truck,
   Receipt,
   PiggyBank,
+  UserPlus,
 } from 'lucide-react';
 import { formatMoney, formatDate } from '@/lib/formatters';
 import {
@@ -26,7 +27,7 @@ import {
 } from '@/lib/stock';
 import { useAuth } from '@/features/auth';
 import { ROUTES, PERMISSIONS, buildRoute } from '@/constants';
-import { catalogueService, paymentService, saleService } from '@/services';
+import { catalogueService, customerService, paymentService, saleService } from '@/services';
 import {
   amountPaidAtSale,
   isActiveInflowPayment,
@@ -59,6 +60,7 @@ export function DashboardPage() {
   const [todayRevenue, setTodayRevenue] = useState(0);
   const [moneyReceived, setMoneyReceived] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
+  const [newCustomersToday, setNewCustomersToday] = useState(0);
   const [lowStock, setLowStock] = useState<CatalogueItem[]>([]);
   const [lowStockThreshold, setLowStockThreshold] = useState(
     DEFAULT_LOW_STOCK_THRESHOLD,
@@ -69,10 +71,11 @@ export function DashboardPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [catalogue, sales, payments] = await Promise.all([
+      const [catalogue, sales, payments, customers] = await Promise.all([
         catalogueService.list({ fresh: true }),
         saleService.list(),
         paymentService.list(),
+        customerService.list(),
       ]);
 
       const today = new Date().toDateString();
@@ -99,6 +102,7 @@ export function DashboardPage() {
       setTodaySales(todaysSales.length);
       setTodayRevenue(revenue);
       setMoneyReceived(received);
+      setNewCustomersToday(customers.filter((customer) => isToday(customer.createdAt)).length);
       setTotalProducts(new Set(catalogue.items.map((item) => item.productId)).size);
       setLowStockThreshold(catalogue.lowStockThreshold);
       setLowStock(
@@ -138,8 +142,8 @@ export function DashboardPage() {
     return (
       <div className="space-y-6 animate-fade-in">
         <PageHeader title="Dashboard" description="Loading your business overview…" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((key) => (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {[1, 2, 3, 4, 5].map((key) => (
             <div key={key} className="rounded-xl border border-border bg-surface p-5 shadow-xs">
               <div className="space-y-3">
                 <Skeleton className="h-3 w-28" />
@@ -182,7 +186,7 @@ export function DashboardPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard
           value={formatMoney(todayRevenue)}
           label="Today's Revenue"
@@ -196,6 +200,13 @@ export function DashboardPage() {
           subtitle="Cash, transfers and POS"
           tone="success"
           icon={<Wallet className="h-5 w-5" aria-hidden="true" />}
+        />
+        <StatCard
+          value={newCustomersToday}
+          label="New Customers"
+          subtitle="Registered today"
+          tone="neutral"
+          icon={<UserPlus className="h-5 w-5" aria-hidden="true" />}
         />
         <StatCard
           value={totalProducts}

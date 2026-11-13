@@ -29,7 +29,7 @@ import {
 } from 'firebase/auth';
 import { deleteApp, initializeApp } from 'firebase/app';
 import { auth, db, firebaseConfig } from '@/lib/firebase/config';
-import { User, Category, Product, ProductVariant, Customer, Supplier, Sale, Purchase, Expense, StockMovement, AuditLog, Payment, Settings, Receipt, PaymentMethod } from '@/types';
+import { User, Category, Product, ProductVariant, Customer, Supplier, Sale, Purchase, PurchaseItem, Expense, StockMovement, AuditLog, Payment, Settings, Receipt, PaymentMethod } from '@/types';
 import {
   createSaleReceipt,
   recordSalePayment,
@@ -87,6 +87,29 @@ const recordDeletionAudit = async (
     });
   } catch (error) {
     console.error('Could not write deletion audit log:', error);
+  }
+};
+
+/** Audits an edit without blocking the write if the log write fails. */
+const recordUpdateAudit = async (
+  entityType: string,
+  entityId: string,
+  details: Record<string, unknown> = {},
+) => {
+  try {
+    const id = generateId();
+    await setDoc(businessDoc(`auditLogs/${id}`), {
+      id,
+      businessId: BUSINESS_ID,
+      userId: auth.currentUser?.uid ?? 'unknown',
+      action: `${entityType}.updated`,
+      entityType,
+      entityId,
+      details,
+      createdAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Could not write update audit log:', error);
   }
 };
 
@@ -512,6 +535,185 @@ export const purchaseService = {
     return id;
   },
   /**
+   * Corrects a recorded purchase: re-applies stock quantities and unit costs,
+   * rebuilds its stock movements, and reconciles the supplier ledger.
+   */
+  async update(
+    id: string,
+    input: {
+      items: PurchaseItem[];
+      additionalCosts: number;
+      amountPaid: number;
+      paymentMethod?: string;
+      notes?: string;
+    },
+  ) {
+    const purchaseRef = businessDoc(`purchases/${id}`);
+    const oldMovementDocs = await docsReferencing('stockMovements', id);
+
+    await runTransaction(db, async (tx) => {
+      const purchaseSnap = await tx.get(purchaseRef);
+      if (!purchaseSnap.exists()) throw new Error('Purchase not found.');
+      const purchase = purchaseSnap.data() as any;
+      if (purchase.status === 'cancelled') {
+        throw new Error('Cancelled purchases cannot be edited.');
+      }
+
+      const oldItems: any[] = Array.isArray(purchase.items) ? purchase.items : [];
+      const newItems: PurchaseItem[] = input.items.map((item) => {
+        if (!item.productId || !item.variantId) {
+          throw new Error('Invalid purchase item.');
+        }
+        if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+          throw new Error(`Invalid quantity for ${item.productName}.`);
+        }
+        if (!Number.isFinite(item.unitCostPrice) || item.unitCostPrice < 0) {
+          throw new Error(`Invalid cost price for ${item.productName}.`);
+        }
+        return {
+          productId: item.productId,
+          productName: item.productName,
+          variantId: item.variantId,
+          variantName: item.variantName,
+          unit: item.unit,
+          quantity: item.quantity,
+          unitCostPrice: item.unitCostPrice,
+          lineTotal: money(item.quantity * item.unitCostPrice),
+        };
+      });
+
+      if (newItems.length === 0) {
+        throw new Error('A purchase must contain at least one item.');
+      }
+      const newKeys = newItems.map((item) => `${item.productId}:${item.variantId}`);
+      if (new Set(newKeys).size !== newKeys.length) {
+        throw new Error('Each product variant may only appear once per purchase.');
+      }
+
+      const variantKeys = [
+        ...new Set([
+          ...oldItems.map((item) => `${item.productId}:${item.variantId}`),
+          ...newKeys,
+        ]),
+      ];
+      const variantRefs = variantKeys.map((key) => {
+        const [productId, variantId] = key.split(':');
+        return businessDoc(`products/${productId}/variants/${variantId}`);
+      });
+      const variantSnaps = await Promise.all(variantRefs.map((ref) => tx.get(ref)));
+      const variants = new Map<
+        string,
+        { ref: ReturnType<typeof businessDoc>; snap: any }
+      >();
+      variantKeys.forEach((key, index) => {
+        variants.set(key, { ref: variantRefs[index], snap: variantSnaps[index] });
+      });
+
+      const supplierRef = purchase.supplierId
+        ? businessDoc(`suppliers/${purchase.supplierId}`)
+        : null;
+      const supplierSnap = supplierRef ? await tx.get(supplierRef) : null;
+      const now = serverTimestamp();
+
+      const oldByKey = new Map(
+        oldItems.map((item) => [`${item.productId}:${item.variantId}`, item]),
+      );
+      const newByKey = new Map(
+        newItems.map((item) => [`${item.productId}:${item.variantId}`, item]),
+      );
+
+      const quantityAfterByKey = new Map<string, number>();
+      variantKeys.forEach((key) => {
+        const entry = variants.get(key);
+        if (!entry || !entry.snap.exists()) return;
+        const oldItem = oldByKey.get(key);
+        const newItem = newByKey.get(key);
+        const delta = Number(newItem?.quantity ?? 0) - Number(oldItem?.quantity ?? 0);
+        const currentQuantity = Number((entry.snap.data() as any).quantityOnHand ?? 0);
+        const quantityAfter = Math.max(0, currentQuantity + delta);
+        quantityAfterByKey.set(key, quantityAfter);
+        const update: Record<string, unknown> = {
+          quantityOnHand: quantityAfter,
+          updatedAt: now,
+        };
+        if (newItem) update.costPrice = newItem.unitCostPrice;
+        tx.update(entry.ref, update);
+      });
+
+      oldMovementDocs.forEach((entry) => tx.delete(entry.ref));
+      newItems.forEach((item) => {
+        const key = `${item.productId}:${item.variantId}`;
+        const entry = variants.get(key);
+        if (!entry || !entry.snap.exists()) return;
+        const quantityAfter = quantityAfterByKey.get(key) ?? 0;
+        tx.set(doc(collection(db, `businesses/${BUSINESS_ID}/stockMovements`)), {
+          businessId: BUSINESS_ID,
+          variantId: item.variantId,
+          productName: item.productName,
+          variantName: item.variantName,
+          movementType: 'Purchase',
+          quantityChange: item.quantity,
+          quantityBefore: Math.max(0, quantityAfter - item.quantity),
+          quantityAfter,
+          referenceType: 'purchase',
+          referenceId: id,
+          reason: `Stock receipt ${purchase.purchaseNumber ?? id.slice(0, 6)} from ${
+            purchase.supplierName || 'supplier'
+          } (edited)`,
+          performedBy: purchase.employeeId,
+          createdAt: now,
+        });
+      });
+
+      const subtotal = newItems.reduce((sum, item) => sum + item.lineTotal, 0);
+      const additionalCosts = Math.max(0, money(Number(input.additionalCosts) || 0));
+      const total = subtotal + additionalCosts;
+      const amountPaid = Math.max(0, Math.min(money(Number(input.amountPaid) || 0), total));
+      const balanceDue = Math.max(0, total - amountPaid);
+
+      if (supplierRef && supplierSnap?.exists()) {
+        const supplier = supplierSnap.data() as any;
+        const totalPurchases = Math.max(
+          0,
+          Number(supplier.totalPurchases ?? 0) - Number(purchase.total ?? 0) + total,
+        );
+        const totalPaid = Math.max(
+          0,
+          Number(supplier.totalPaid ?? 0) - Number(purchase.amountPaid ?? 0) + amountPaid,
+        );
+        tx.update(supplierRef, {
+          totalPurchases,
+          totalPaid,
+          balanceDue: Math.max(0, totalPurchases - totalPaid),
+          updatedAt: now,
+        });
+      }
+
+      tx.update(
+        purchaseRef,
+        stripUndefined({
+          items: newItems,
+          subtotal,
+          additionalCosts,
+          total,
+          amountPaid,
+          balanceDue,
+          paymentStatus: amountPaid >= total ? 'paid' : amountPaid > 0 ? 'partial' : 'unpaid',
+          paymentMethod: input.paymentMethod,
+          notes: input.notes,
+          updatedAt: now,
+        }),
+      );
+    });
+
+    await recordUpdateAudit('purchase', id, {
+      items: input.items.length,
+      additionalCosts: input.additionalCosts,
+      amountPaid: input.amountPaid,
+    });
+    catalogueService.invalidate();
+  },
+  /**
    * Owner-only hard delete. Reverses the stock intake, reduces the supplier
    * ledger, and removes the purchase's stock movements.
    */
@@ -591,6 +793,27 @@ export const expenseService = {
       createdAt: data.createdAt ? Timestamp.fromDate(data.createdAt) : serverTimestamp(),
     });
     return id;
+  },
+  async update(
+    id: string,
+    data: Partial<
+      Pick<Expense, 'description' | 'category' | 'amount' | 'paymentMethod' | 'notes' | 'receiptUrl'>
+    > & { createdAt?: Date },
+  ) {
+    const payload: Record<string, unknown> = {
+      ...stripUndefined(data as Record<string, unknown>),
+      updatedAt: serverTimestamp(),
+    };
+    if (data.createdAt) {
+      payload.createdAt = Timestamp.fromDate(data.createdAt);
+    } else {
+      delete payload.createdAt;
+    }
+    await updateDoc(businessDoc(`expenses/${id}`), payload);
+    await recordUpdateAudit('expense', id, {
+      ...data,
+      createdAt: data.createdAt?.toISOString(),
+    });
   },
   async remove(id: string) {
     await deleteDoc(businessDoc(`expenses/${id}`));
@@ -900,6 +1123,102 @@ export const paymentService = {
     );
     const snap = await getDocs(q);
     return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Payment));
+  },
+  /**
+   * Corrects a recorded payment and reconciles the linked sale, customer or
+   * supplier ledger by the difference between the old and new amount.
+   */
+  async update(id: string, input: { amount: number; paymentMethod?: string }) {
+    const paymentRef = businessDoc(`payments/${id}`);
+    const amount = money(Number(input.amount) || 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error('Amount must be greater than zero.');
+    }
+
+    await runTransaction(db, async (tx) => {
+      const paymentSnap = await tx.get(paymentRef);
+      if (!paymentSnap.exists()) throw new Error('Payment not found.');
+      const payment = paymentSnap.data() as any;
+      const oldAmount = Number(payment.amount ?? 0);
+      const delta = amount - oldAmount;
+      const now = serverTimestamp();
+
+      if (payment.referenceType === 'sale') {
+        const saleRef = businessDoc(`sales/${payment.referenceId}`);
+        const saleSnap = await tx.get(saleRef);
+        if (!saleSnap.exists()) throw new Error('The linked sale was not found.');
+        const sale = saleSnap.data() as any;
+        if (sale.status !== 'completed') {
+          throw new Error('Payments on voided or cancelled sales cannot be edited.');
+        }
+        const total = Number(sale.total ?? 0);
+        const newAmountPaid = Math.max(0, Number(sale.amountPaid ?? 0) + delta);
+        if (newAmountPaid > total) {
+          throw new Error('The updated payment exceeds the sale total.');
+        }
+        tx.update(saleRef, {
+          amountPaid: newAmountPaid,
+          balanceDue: Math.max(0, total - newAmountPaid),
+          paymentStatus:
+            newAmountPaid >= total ? 'paid' : newAmountPaid > 0 ? 'partial' : 'unpaid',
+          updatedAt: now,
+        });
+
+        if (sale.customerId) {
+          const customerRef = businessDoc(`customers/${sale.customerId}`);
+          const customerSnap = await tx.get(customerRef);
+          if (customerSnap.exists()) {
+            const customer = customerSnap.data() as any;
+            const totalPurchases = Number(customer.totalPurchases ?? 0);
+            const totalPaid = Math.max(0, Number(customer.totalPaid ?? 0) + delta);
+            tx.update(customerRef, {
+              totalPaid,
+              balanceDue: Math.max(0, totalPurchases - totalPaid),
+              updatedAt: now,
+            });
+          }
+        }
+      } else if (payment.referenceType === 'customer' || payment.referenceType === 'supplier') {
+        const collectionName =
+          payment.referenceType === 'customer' ? 'customers' : 'suppliers';
+        const partyRef = businessDoc(`${collectionName}/${payment.referenceId}`);
+        const partySnap = await tx.get(partyRef);
+        if (!partySnap.exists()) {
+          throw new Error('The linked customer or supplier was not found.');
+        }
+        const party = partySnap.data() as any;
+        const totalPurchases = Number(party.totalPurchases ?? 0);
+        const totalPaid = Math.max(0, Number(party.totalPaid ?? 0) + delta);
+        if (totalPaid > totalPurchases) {
+          throw new Error('The updated payment exceeds the outstanding balance.');
+        }
+        tx.update(partyRef, {
+          totalPaid,
+          balanceDue: Math.max(0, totalPurchases - totalPaid),
+          updatedAt: now,
+        });
+      } else {
+        throw new Error('This payment cannot be edited.');
+      }
+
+      tx.update(
+        paymentRef,
+        stripUndefined({
+          amount,
+          paymentMethod: input.paymentMethod,
+          updatedAt: now,
+        }),
+      );
+      tx.set(doc(collection(db, `businesses/${BUSINESS_ID}/auditLogs`)), {
+        businessId: BUSINESS_ID,
+        userId: auth.currentUser?.uid ?? 'unknown',
+        action: 'payment.updated',
+        entityType: 'payment',
+        entityId: id,
+        details: { oldAmount, amount, paymentMethod: input.paymentMethod },
+        createdAt: now,
+      });
+    });
   },
 };
 

@@ -66,6 +66,7 @@ const StockReportPage = lazyNamed(() => import('@/features/reports'), 'StockRepo
 const ProfitReportPage = lazyNamed(() => import('@/features/reports'), 'ProfitReportPage');
 const ExpensesReportPage = lazyNamed(() => import('@/features/reports'), 'ExpensesReportPage');
 const DebtsReportPage = lazyNamed(() => import('@/features/reports'), 'DebtsReportPage');
+const IncomeReportPage = lazyNamed(() => import('@/features/reports'), 'IncomeReportPage');
 
 const router = createBrowserRouter([
   {
@@ -360,6 +361,14 @@ const router = createBrowserRouter([
         element: (
           <RequirePermission permission={PERMISSIONS.REPORTS_VIEW}>
             <DebtsReportPage />
+          </RequirePermission>
+        ),
+      },
+      {
+        path: 'reports/income',
+        element: (
+          <RequirePermission permission={PERMISSIONS.REPORTS_VIEW}>
+            <IncomeReportPage />
           </RequirePermission>
         ),
       },

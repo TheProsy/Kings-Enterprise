@@ -1,90 +1,153 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatsSkeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
-import { saleService, purchaseService, expenseService, paymentService } from '@/services';
+import { ReportPeriodSelect } from '@/components/forms/ReportPeriodSelect';
+import {
+  customerService,
+  saleService,
+  purchaseService,
+  expenseService,
+  paymentService,
+} from '@/services';
 import { formatMoney } from '@/lib/formatters';
 import {
   amountPaidAtSale,
   isActiveInflowPayment,
   saleLinkedPaymentTotals,
 } from '@/lib/payments';
+import {
+  customerIdentity,
+  filterByPeriod,
+  getPeriodRange,
+  netSaleTotal,
+  saleCogs,
+  type ReportPeriod,
+} from '@/lib/reporting';
 import { ROUTES } from '@/constants';
 import { toast } from '@/lib/toast';
 import { NavLink } from 'react-router-dom';
-import { TrendingUp, DollarSign, Package, CreditCard, Users, ChevronRight, BarChart3, Download } from 'lucide-react';
+import {
+  TrendingUp,
+  DollarSign,
+  Package,
+  CreditCard,
+  Users,
+  ChevronRight,
+  BarChart3,
+  Download,
+  UserPlus,
+  Wallet,
+} from 'lucide-react';
+import type { Customer, Expense, Payment, Purchase, Sale } from '@/types';
 
 export function ReportsPage() {
-  const [stats, setStats] = useState<any>({});
+  const [period, setPeriod] = useState<ReportPeriod>('month');
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadStats = useCallback(async () => {
-    try {
-      const [sales, purchs, exps, payments] = await Promise.all([
-        saleService.list(),
-        purchaseService.list(),
-        expenseService.list(),
-        paymentService.list(),
-      ]);
-
-      const completedSales = sales.filter((sale) => sale.status === 'completed');
-      const totalSales = completedSales.reduce(
-        (sum, sale) =>
-          sum + Math.max(0, (sale.total || 0) - (sale.returnedTotalKobo || 0)),
-        0,
-      );
-      const linkedPaymentTotals = saleLinkedPaymentTotals(payments);
-      const salesById = new Map(sales.map((sale) => [sale.id, sale]));
-      const totalReceived =
-        completedSales.reduce(
-          (sum, sale) => sum + amountPaidAtSale(sale, linkedPaymentTotals),
-          0,
-        ) +
-        payments
-          .filter((payment) => isActiveInflowPayment(payment, salesById))
-          .reduce((sum, payment) => sum + payment.amount, 0);
-      const totalPurchases = purchs
-        .filter((purchase) => purchase.status !== 'cancelled')
-        .reduce((sum, p) => sum + p.total, 0);
-      const totalExpenses = exps.reduce((sum, e) => sum + e.amount, 0);
-      const cogs = completedSales.reduce(
-        (sum, sale) =>
-          sum +
-          (sale.items || []).reduce((lineTotal, item) => {
-            const returned = Number(
-              sale.returnedQuantities?.[
-                `${item.productId}:${item.variantId}`
-              ] ?? 0,
-            );
-            const soldQuantity = Math.max(0, item.quantity - returned);
-            return lineTotal + item.costBasis * soldQuantity;
-          }, 0),
-        0,
-      );
-
-      setStats({
-        totalSales,
-        totalReceived,
-        totalPurchases,
-        totalExpenses,
-        grossProfit: totalSales - cogs,
-        netProfit: totalSales - cogs - totalExpenses,
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      saleService.list(),
+      purchaseService.list(),
+      expenseService.list(),
+      paymentService.list(),
+      customerService.list(),
+    ])
+      .then(([salesList, purchaseList, expenseList, paymentList, customerList]) => {
+        if (!active) return;
+        setSales(salesList);
+        setPurchases(purchaseList);
+        setExpenses(expenseList);
+        setPayments(paymentList);
+        setCustomers(customerList);
+      })
+      .catch((error) => {
+        console.error(error);
+        toast('Could not load the reports summary.', 'error');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
-    } catch (error) {
-      console.error(error);
-      toast('Could not load the reports summary.', 'error');
-    } finally {
-      setLoading(false);
-    }
+    return () => {
+      active = false;
+    };
   }, []);
 
-  useEffect(() => {
-    loadStats();
-  }, [loadStats]);
+  const range = useMemo(() => getPeriodRange(period), [period]);
+
+  const stats = useMemo(() => {
+    const periodSales = filterByPeriod(
+      sales.filter((sale) => sale.status === 'completed'),
+      (sale) => sale.createdAt,
+      range,
+    );
+    const periodExpenses = filterByPeriod(
+      expenses,
+      (expense) => expense.createdAt,
+      range,
+    );
+    const periodPurchases = filterByPeriod(
+      purchases.filter((purchase) => purchase.status !== 'cancelled'),
+      (purchase) => purchase.createdAt,
+      range,
+    );
+    const salesById = new Map(sales.map((sale) => [sale.id, sale]));
+    const periodPayments = filterByPeriod(
+      payments.filter((payment) => isActiveInflowPayment(payment, salesById)),
+      (payment) => payment.createdAt,
+      range,
+    );
+    const newCustomers = filterByPeriod(
+      customers,
+      (customer) => customer.createdAt,
+      range,
+    );
+
+    const totalSales = periodSales.reduce((sum, sale) => sum + netSaleTotal(sale), 0);
+    const linkedPaymentTotals = saleLinkedPaymentTotals(payments);
+    const totalReceived =
+      periodSales.reduce(
+        (sum, sale) => sum + amountPaidAtSale(sale, linkedPaymentTotals),
+        0,
+      ) + periodPayments.reduce((sum, payment) => sum + payment.amount, 0);
+    const totalPurchases = periodPurchases.reduce((sum, purchase) => sum + purchase.total, 0);
+    const totalExpenses = periodExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const cogs = periodSales.reduce((sum, sale) => sum + saleCogs(sale), 0);
+    const customersServed = new Set(
+      periodSales
+        .map((sale) => customerIdentity(sale))
+        .filter((identity): identity is string => Boolean(identity)),
+    ).size;
+
+    return {
+      totalSales,
+      totalReceived,
+      totalPurchases,
+      totalExpenses,
+      grossProfit: totalSales - cogs,
+      netProfit: totalSales - cogs - totalExpenses,
+      salesCount: periodSales.length,
+      newCustomers: newCustomers.length,
+      customersServed,
+    };
+  }, [sales, purchases, expenses, payments, customers, range]);
 
   const reportSections = [
+    {
+      title: 'Income & Customer Report',
+      desc: 'Day, week, month or year income statement with sales, expenses, and customers acquired.',
+      route: ROUTES.APP_REPORTS_INCOME,
+      icon: Wallet,
+      color: 'text-success-fg',
+    },
     {
       title: 'Sales Performance',
       desc: 'Daily, weekly and monthly sales trends, volume by material, and top-grossing items.',
@@ -128,68 +191,84 @@ export function ReportsPage() {
         title="Reports"
         description="Comprehensive financial reporting, gross profit margins, and inventory performance."
         action={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.print()}
-          >
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Download className="h-4 w-4 mr-1.5" />
             Print / Export Summary
           </Button>
         }
       />
 
-      {/* Primary Financial Metric Summary Cards */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <ReportPeriodSelect value={period} onChange={setPeriod} />
+        <p className="text-xs text-text-muted">
+          Showing {range.label.toLowerCase()} · {stats.salesCount} sale
+          {stats.salesCount === 1 ? '' : 's'}
+        </p>
+      </div>
+
       {loading ? (
-        <StatsSkeleton count={6} />
+        <StatsSkeleton count={8} />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
-            label="Total Revenue Generated"
+            label="Sales Revenue"
             value={formatMoney(stats.totalSales || 0)}
-            subtitle="All completed sales transactions"
+            subtitle={`${stats.salesCount} completed sales`}
             icon={<DollarSign className="h-5 w-5" />}
             tone="brand"
           />
           <StatCard
-            label="Estimated Gross Profit"
+            label="Net Income"
+            value={formatMoney(stats.netProfit || 0)}
+            subtitle="Gross profit minus expenses"
+            icon={<BarChart3 className="h-5 w-5" />}
+            tone={(stats.netProfit || 0) >= 0 ? 'success' : 'danger'}
+          />
+          <StatCard
+            label="Gross Profit"
             value={formatMoney(stats.grossProfit || 0)}
             subtitle="Sales revenue minus material costs"
             icon={<TrendingUp className="h-5 w-5" />}
             tone="success"
           />
           <StatCard
-            label="Net Operating Profit"
-            value={formatMoney(stats.netProfit || 0)}
-            subtitle="After deducting business expenses"
-            icon={<BarChart3 className="h-5 w-5" />}
-            tone="warning"
-          />
-          <StatCard
-            label="Collected Payments"
+            label="Cash Collected"
             value={formatMoney(stats.totalReceived || 0)}
-            subtitle="Verified incoming cash & bank transfers"
+            subtitle="Sales receipts and debt payments"
             icon={<DollarSign className="h-5 w-5" />}
             tone="success"
           />
           <StatCard
             label="Material Purchases"
             value={formatMoney(stats.totalPurchases || 0)}
-            subtitle="Total supplier procurement cost"
+            subtitle="Supplier procurement cost"
             icon={<Package className="h-5 w-5" />}
             tone="brand"
           />
           <StatCard
-            label="Operational Expenses"
+            label="Operating Expenses"
             value={formatMoney(stats.totalExpenses || 0)}
             subtitle="Store overhead, transport & salaries"
             icon={<CreditCard className="h-5 w-5" />}
             tone="danger"
           />
+          <StatCard
+            label="New Customers"
+            value={stats.newCustomers}
+            subtitle="Accounts added in this period"
+            icon={<UserPlus className="h-5 w-5" />}
+            tone="warning"
+          />
+          <StatCard
+            label="Customers Served"
+            value={stats.customersServed}
+            subtitle="Unique named or registered buyers"
+            icon={<Users className="h-5 w-5" />}
+            tone="neutral"
+          />
         </div>
       )}
 
-      {/* Specialized Reports Cards Grid */}
       <div>
         <h3 className="text-base font-bold text-text-primary tracking-tight mb-3">
           Detailed Analytics & Reports

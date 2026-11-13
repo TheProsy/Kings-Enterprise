@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -9,9 +9,10 @@ import { purchaseService, expenseService, paymentService } from '@/services';
 import { formatMoney, formatDate } from '@/lib/formatters';
 import { toast } from '@/lib/toast';
 import { ROUTES } from '@/constants';
-import { ArrowUpRight, ChevronLeft, Receipt, ShoppingCart } from 'lucide-react';
+import { ArrowUpRight, ChevronLeft, Pencil, Receipt, ShoppingCart } from 'lucide-react';
 import type { Expense, Payment, Purchase } from '@/types';
 import { FinanceTabs } from './FinanceTabs';
+import { EditPaymentModal } from './EditPaymentModal';
 
 export function MoneySpentPage() {
   const navigate = useNavigate();
@@ -19,31 +20,32 @@ export function MoneySpentPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [supplierPayments, setSupplierPayments] = useState<Payment[]>([]);
   const [query, setQuery] = useState('');
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let active = true;
-    Promise.all([purchaseService.list(), expenseService.list(), paymentService.list()])
-      .then(([purchaseList, expenseList, paymentList]) => {
-        if (!active) return;
-        setPurchases(
-          purchaseList.filter((purchase) => purchase.status !== 'cancelled'),
-        );
-        setExpenses(expenseList);
-        setSupplierPayments(paymentList.filter((payment) => payment.direction === 'out'));
-      })
-      .catch((error) => {
-        console.error(error);
-        toast('Could not load money spent.', 'error');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
+  const loadData = useCallback(async () => {
+    try {
+      const [purchaseList, expenseList, paymentList] = await Promise.all([
+        purchaseService.list(),
+        expenseService.list(),
+        paymentService.list(),
+      ]);
+      setPurchases(
+        purchaseList.filter((purchase) => purchase.status !== 'cancelled'),
+      );
+      setExpenses(expenseList);
+      setSupplierPayments(paymentList.filter((payment) => payment.direction === 'out'));
+    } catch (error) {
+      console.error(error);
+      toast('Could not load money spent.', 'error');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const purchaseTotal = purchases.reduce((sum, purchase) => sum + purchase.amountPaid, 0);
   const expenseTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -237,9 +239,19 @@ export function MoneySpentPage() {
                             {payment.paymentMethod}
                           </p>
                         </div>
-                        <p className="shrink-0 text-sm font-bold tabular-nums text-text-primary">
-                          {formatMoney(payment.amount)}
-                        </p>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          <p className="text-sm font-bold tabular-nums text-text-primary">
+                            {formatMoney(payment.amount)}
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setEditingPayment(payment)}
+                            aria-label="Edit supplier payment"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                       <div className="mt-1 text-xs text-text-secondary">
                         {formatDate(payment.createdAt)}
@@ -256,6 +268,14 @@ export function MoneySpentPage() {
           </Card>
         </div>
       )}
+
+      <EditPaymentModal
+        payment={editingPayment}
+        onClose={() => setEditingPayment(null)}
+        onSaved={() => {
+          void loadData();
+        }}
+      />
     </div>
   );
 }

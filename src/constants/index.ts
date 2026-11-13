@@ -243,6 +243,7 @@ export const ROUTES = {
   APP_REPORTS_PROFIT: '/app/reports/profit',
   APP_REPORTS_EXPENSES: '/app/reports/expenses',
   APP_REPORTS_DEBTS: '/app/reports/debts',
+  APP_REPORTS_INCOME: '/app/reports/income',
   APP_EMPLOYEES: '/app/employees',
   APP_EMPLOYEES_NEW: '/app/employees/new',
   APP_EMPLOYEE_DETAIL: '/app/employees/:employeeId',

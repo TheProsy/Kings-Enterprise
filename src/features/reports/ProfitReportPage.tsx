@@ -1,71 +1,39 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatsSkeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
+import { ReportPeriodSelect } from '@/components/forms/ReportPeriodSelect';
 import { saleService, expenseService } from '@/services';
 import { formatMoney } from '@/lib/formatters';
+import {
+  filterByPeriod,
+  getPeriodRange,
+  netSaleTotal,
+  saleCogs,
+  type ReportPeriod,
+} from '@/lib/reporting';
 import { toast } from '@/lib/toast';
 import { TrendingUp, DollarSign, ArrowDownRight, ArrowUpRight, Printer, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '@/constants';
+import type { Expense, Sale } from '@/types';
 
 export function ProfitReportPage() {
-  const [stats, setStats] = useState<any>({});
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [period, setPeriod] = useState<ReportPeriod>('month');
   const [loading, setLoading] = useState(true);
 
-  const loadStats = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
-      const [sales, exps] = await Promise.all([
+      const [salesList, expenseList] = await Promise.all([
         saleService.list(),
         expenseService.list(),
       ]);
-
-      const completedSales = sales.filter((sale) => sale.status === 'completed');
-      const totalSalesRevenue = completedSales.reduce(
-        (sum, sale) =>
-          sum + Math.max(0, (sale.total || 0) - (sale.returnedTotalKobo || 0)),
-        0,
-      );
-      const totalCOGS = completedSales.reduce(
-        (sum, sale) =>
-          sum +
-          (sale.items || []).reduce(
-            (lineTotal: number, item: any) => {
-              const returned = Number(
-                sale.returnedQuantities?.[
-                  `${item.productId}:${item.variantId}`
-                ] ?? 0,
-              );
-              const soldQuantity = Math.max(
-                0,
-                (item.quantity || 0) - returned,
-              );
-              return lineTotal + (item.costBasis || 0) * soldQuantity;
-            },
-            0,
-          ),
-        0,
-      );
-      const totalExpenses = exps.reduce((sum, e) => sum + (e.amount || 0), 0);
-
-      const grossProfit = totalSalesRevenue - totalCOGS;
-      const netProfit = grossProfit - totalExpenses;
-      const grossMargin = totalSalesRevenue > 0 ? (grossProfit / totalSalesRevenue) * 100 : 0;
-      const netMargin = totalSalesRevenue > 0 ? (netProfit / totalSalesRevenue) * 100 : 0;
-
-      setStats({
-        totalSalesRevenue,
-        totalCOGS,
-        totalExpenses,
-        grossProfit,
-        netProfit,
-        grossMargin,
-        netMargin,
-        transactionCount: completedSales.length,
-        expenseCount: exps.length,
-      });
+      setSales(salesList.filter((sale) => sale.status === 'completed'));
+      setExpenses(expenseList);
     } catch (err) {
       console.error('Failed to load profit statistics:', err);
       toast('Could not load the profit report.', 'error');
@@ -75,8 +43,31 @@ export function ProfitReportPage() {
   }, []);
 
   useEffect(() => {
-    loadStats();
-  }, [loadStats]);
+    loadData();
+  }, [loadData]);
+
+  const range = useMemo(() => getPeriodRange(period), [period]);
+  const stats = useMemo(() => {
+    const periodSales = filterByPeriod(sales, (sale) => sale.createdAt, range);
+    const periodExpenses = filterByPeriod(expenses, (expense) => expense.createdAt, range);
+    const totalSalesRevenue = periodSales.reduce((sum, sale) => sum + netSaleTotal(sale), 0);
+    const totalCOGS = periodSales.reduce((sum, sale) => sum + saleCogs(sale), 0);
+    const totalExpenses = periodExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const grossProfit = totalSalesRevenue - totalCOGS;
+    const netProfit = grossProfit - totalExpenses;
+
+    return {
+      totalSalesRevenue,
+      totalCOGS,
+      totalExpenses,
+      grossProfit,
+      netProfit,
+      grossMargin: totalSalesRevenue > 0 ? (grossProfit / totalSalesRevenue) * 100 : 0,
+      netMargin: totalSalesRevenue > 0 ? (netProfit / totalSalesRevenue) * 100 : 0,
+      transactionCount: periodSales.length,
+      expenseCount: periodExpenses.length,
+    };
+  }, [sales, expenses, range]);
 
   return (
     <div className="space-y-6">
@@ -102,6 +93,15 @@ export function ProfitReportPage() {
           </>
         }
       />
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <ReportPeriodSelect value={period} onChange={setPeriod} />
+        <p className="text-xs text-text-muted">
+          {range.label} · {stats.transactionCount} sale
+          {stats.transactionCount === 1 ? '' : 's'} · {stats.expenseCount} expense
+          {stats.expenseCount === 1 ? '' : 's'}
+        </p>
+      </div>
 
       {/* Primary KPI Stats */}
       {loading ? (
@@ -183,7 +183,7 @@ export function ProfitReportPage() {
               <span className="text-text-secondary font-medium">Less: Operating & Overhead Expenses</span>
               <span className="font-semibold text-danger">-{formatMoney(stats.totalExpenses || 0)}</span>
             </div>
-            <div className="bg-surface/80 rounded-lg p-4 border border-border/80 shadow-xs">
+            <div className="bg-surface/80 rounded-lg border border-border/80 shadow-xs p-4">
               <div className="flex flex-wrap justify-between items-center gap-2 text-base">
                 <span className="font-bold text-text-primary">Net Clean Profit</span>
                 <span className={`text-xl font-bold ${(stats.netProfit || 0) >= 0 ? 'text-success' : 'text-danger'}`}>

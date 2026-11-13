@@ -15,7 +15,8 @@ import { useAuth } from '@/features/auth';
 import { formatMoney, formatDate } from '@/lib/formatters';
 import { toast } from '@/lib/toast';
 import type { Expense } from '@/types';
-import { Plus, CreditCard, Receipt, Tag } from 'lucide-react';
+import { Plus, CreditCard, Receipt, Tag, Pencil } from 'lucide-react';
+import { EditExpenseModal } from './EditExpenseModal';
 
 export function ExpensesPage() {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ export function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [editing, setEditing] = useState<Expense | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -110,11 +112,23 @@ export function ExpensesPage() {
       headerClassName: 'text-right',
       className: 'text-right',
       render: (e: Expense) => (
-        <DeleteRecordButton
-          entityLabel="Expense"
-          recordLabel={e.description}
-          onDelete={() => removeExpense(e)}
-        />
+        <div className="flex items-center justify-end gap-1">
+          {canCreate && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setEditing(e)}
+              aria-label={`Edit ${e.description}`}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          <DeleteRecordButton
+            entityLabel="Expense"
+            recordLabel={e.description}
+            onDelete={() => removeExpense(e)}
+          />
+        </div>
       ),
     },
   ];
@@ -200,14 +214,36 @@ export function ExpensesPage() {
             </div>
             <div className="flex items-center justify-between pt-1">
               <Badge variant="neutral">{e.category}</Badge>
-              <DeleteRecordButton
-                entityLabel="Expense"
-                recordLabel={e.description}
-                onDelete={() => removeExpense(e)}
-              />
+              <div className="flex items-center gap-1">
+                {canCreate && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditing(e)}
+                    aria-label={`Edit ${e.description}`}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                <DeleteRecordButton
+                  entityLabel="Expense"
+                  recordLabel={e.description}
+                  onDelete={() => removeExpense(e)}
+                />
+              </div>
             </div>
           </div>
         )}
+      />
+
+      <EditExpenseModal
+        expense={editing}
+        onClose={() => setEditing(null)}
+        onSaved={(updated) =>
+          setExpenses((current) =>
+            current.map((entry) => (entry.id === updated.id ? updated : entry)),
+          )
+        }
       />
     </div>
   );

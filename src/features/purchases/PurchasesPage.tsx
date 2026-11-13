@@ -13,7 +13,8 @@ import { PERMISSIONS, ROUTES } from '@/constants';
 import { useAuth } from '@/features/auth';
 import { toast } from '@/lib/toast';
 import type { Payment, Purchase } from '@/types';
-import { Plus, Truck } from 'lucide-react';
+import { Plus, Truck, Pencil } from 'lucide-react';
+import { EditPurchaseModal } from './EditPurchaseModal';
 
 export function PurchasesPage() {
   const { hasPermission } = useAuth();
@@ -22,6 +23,7 @@ export function PurchasesPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState<Purchase | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -157,12 +159,24 @@ export function PurchasesPage() {
       headerClassName: 'text-right',
       className: 'text-right',
       render: (p: Purchase) => (
-        <DeleteRecordButton
-          entityLabel="Purchase"
-          recordLabel={p.purchaseNumber || p.id.slice(0, 8)}
-          description="The received stock is deducted from inventory and the supplier balance is reduced."
-          onDelete={() => removePurchase(p)}
-        />
+        <div className="flex items-center justify-end gap-1">
+          {canCreate && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setEditing(p)}
+              aria-label={`Edit purchase ${p.purchaseNumber || p.id.slice(0, 8)}`}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          <DeleteRecordButton
+            entityLabel="Purchase"
+            recordLabel={p.purchaseNumber || p.id.slice(0, 8)}
+            description="The received stock is deducted from inventory and the supplier balance is reduced."
+            onDelete={() => removePurchase(p)}
+          />
+        </div>
       ),
     },
   ];
@@ -247,7 +261,17 @@ export function PurchasesPage() {
               <span>{p.items?.length || 0} material variants</span>
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-1">
+              {canCreate && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setEditing(p)}
+                  aria-label={`Edit purchase ${p.purchaseNumber || p.id.slice(0, 8)}`}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
               <DeleteRecordButton
                 entityLabel="Purchase"
                 recordLabel={p.purchaseNumber || p.id.slice(0, 8)}
@@ -257,6 +281,14 @@ export function PurchasesPage() {
             </div>
           </div>
           );
+        }}
+      />
+
+      <EditPurchaseModal
+        purchase={editing}
+        onClose={() => setEditing(null)}
+        onSaved={() => {
+          void loadData();
         }}
       />
     </div>

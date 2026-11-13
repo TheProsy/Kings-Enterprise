@@ -4,3 +4,4 @@ export { StockReportPage } from './StockReportPage';
 export { ProfitReportPage } from './ProfitReportPage';
 export { ExpensesReportPage } from './ExpensesReportPage';
 export { DebtsReportPage } from './DebtsReportPage';
+export { IncomeReportPage } from './IncomeReportPage';

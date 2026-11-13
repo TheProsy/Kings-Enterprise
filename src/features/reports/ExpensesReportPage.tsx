@@ -1,11 +1,13 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DataTable, type Column } from '@/components/tables/DataTable';
+import { ReportPeriodSelect } from '@/components/forms/ReportPeriodSelect';
 import { expenseService } from '@/services';
 import { formatMoney, formatDate } from '@/lib/formatters';
+import { filterByPeriod, getPeriodRange, type ReportPeriod } from '@/lib/reporting';
 import { toast } from '@/lib/toast';
 import type { Expense } from '@/types';
 import { Receipt, FolderTree, FileSpreadsheet, Printer, ArrowLeft } from 'lucide-react';
@@ -20,14 +22,13 @@ interface CategoryRow {
 
 export function ExpensesReportPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [period, setPeriod] = useState<ReportPeriod>('month');
   const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
 
   const loadData = useCallback(async () => {
     try {
       const data = await expenseService.list();
       setExpenses(data);
-      setTotal(data.reduce((sum, e) => sum + (e.amount || 0), 0));
     } catch (err) {
       console.error('Failed to load expenses report:', err);
       toast('Could not load the expenses report.', 'error');
@@ -40,9 +41,20 @@ export function ExpensesReportPage() {
     loadData();
   }, [loadData]);
 
-  const byCategory: CategoryRow[] = Array.from(new Set(expenses.map((expense) => expense.category)))
+  const range = useMemo(() => getPeriodRange(period), [period]);
+  const periodExpenses = useMemo(
+    () => filterByPeriod(expenses, (expense) => expense.createdAt, range),
+    [expenses, range],
+  );
+  const total = periodExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+
+  const byCategory: CategoryRow[] = Array.from(
+    new Set(periodExpenses.map((expense) => expense.category)),
+  )
     .map((category) => {
-      const categoryExpenses = expenses.filter((expense) => expense.category === category);
+      const categoryExpenses = periodExpenses.filter(
+        (expense) => expense.category === category,
+      );
       return {
         category,
         count: categoryExpenses.length,
@@ -120,18 +132,26 @@ export function ExpensesReportPage() {
         }
       />
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <ReportPeriodSelect value={period} onChange={setPeriod} />
+        <p className="text-xs text-text-muted">
+          {range.label} · {periodExpenses.length} expense
+          {periodExpenses.length === 1 ? '' : 's'}
+        </p>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
           label="Total Operating Expenses"
           value={formatMoney(total)}
           icon={<Receipt className="w-5 h-5" />}
-          description="Cumulative overhead spending"
+          description="Overhead spending in period"
           tone="danger"
         />
         <StatCard
           label="Total Payment Entries"
-          value={expenses.length.toString()}
+          value={periodExpenses.length.toString()}
           icon={<FileSpreadsheet className="w-5 h-5" />}
           description="Logged expense transactions"
           tone="brand"
@@ -179,9 +199,9 @@ export function ExpensesReportPage() {
           <CardTitle>Recent 10 Expenses</CardTitle>
         </CardHeader>
         <CardContent>
-          {expenses.length > 0 ? (
+          {periodExpenses.length > 0 ? (
             <div className="divide-y divide-border/60">
-              {expenses.slice(0, 10).map((e) => (
+              {periodExpenses.slice(0, 10).map((e) => (
                 <div key={e.id} className="flex items-center justify-between gap-3 py-3 text-sm">
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-text-primary">{e.description || e.category}</p>

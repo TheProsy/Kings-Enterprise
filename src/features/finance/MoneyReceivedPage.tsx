@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useCallback, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -15,9 +15,10 @@ import {
 } from '@/lib/payments';
 import { toast } from '@/lib/toast';
 import { ROUTES } from '@/constants';
-import { ArrowDownLeft, ChevronLeft, TrendingUp, Users } from 'lucide-react';
+import { ArrowDownLeft, ChevronLeft, TrendingUp, Users, Pencil } from 'lucide-react';
 import type { Payment, Sale } from '@/types';
 import { FinanceTabs } from './FinanceTabs';
+import { EditPaymentModal } from './EditPaymentModal';
 
 function paymentStatusVariant(status: Sale['paymentStatus']) {
   return status === 'paid' ? 'success' : status === 'partial' ? 'warning' : 'danger';
@@ -28,32 +29,33 @@ export function MoneyReceivedPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [query, setQuery] = useState('');
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let active = true;
-    Promise.all([saleService.list(), paymentService.list()])
-      .then(([salesList, paymentList]) => {
-        if (!active) return;
-        const salesById = new Map(salesList.map((sale) => [sale.id, sale]));
-        setSales(salesList.filter((sale) => sale.status === 'completed'));
-        setPayments(
-          paymentList.filter((payment) =>
-            isActiveInflowPayment(payment, salesById),
-          ),
-        );
-      })
-      .catch((error) => {
-        console.error(error);
-        toast('Could not load money received.', 'error');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+  const loadData = useCallback(async () => {
+    try {
+      const [salesList, paymentList] = await Promise.all([
+        saleService.list(),
+        paymentService.list(),
+      ]);
+      const salesById = new Map(salesList.map((sale) => [sale.id, sale]));
+      setSales(salesList.filter((sale) => sale.status === 'completed'));
+      setPayments(
+        paymentList.filter((payment) =>
+          isActiveInflowPayment(payment, salesById),
+        ),
+      );
+    } catch (error) {
+      console.error(error);
+      toast('Could not load money received.', 'error');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const linkedPaymentTotals = useMemo(
     () => saleLinkedPaymentTotals(payments),
@@ -262,9 +264,19 @@ export function MoneyReceivedPage() {
                         <span className="capitalize">{payment.paymentMethod}</span>
                       </p>
                     </div>
-                    <p className="shrink-0 text-base font-bold tabular-nums text-success-fg">
-                      {formatMoney(payment.amount)}
-                    </p>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <p className="text-base font-bold tabular-nums text-success-fg">
+                        {formatMoney(payment.amount)}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditingPayment(payment)}
+                        aria-label="Edit payment"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -277,6 +289,7 @@ export function MoneyReceivedPage() {
                       <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Customer</th>
                       <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary text-right">Amount</th>
                       <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary">Method</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase text-text-secondary text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
@@ -292,6 +305,16 @@ export function MoneyReceivedPage() {
                         <td className="px-4 py-3 text-sm capitalize text-text-secondary">
                           {payment.paymentMethod}
                         </td>
+                        <td className="px-4 py-3 text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setEditingPayment(payment)}
+                            aria-label="Edit payment"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -301,6 +324,14 @@ export function MoneyReceivedPage() {
           )}
         </CardContent>
       </Card>
+
+      <EditPaymentModal
+        payment={editingPayment}
+        onClose={() => setEditingPayment(null)}
+        onSaved={() => {
+          void loadData();
+        }}
+      />
     </div>
   );
 }
