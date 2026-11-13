@@ -119,6 +119,12 @@ export const NAV_ITEMS: NavSection[] = [
         permission: PERMISSIONS.CUSTOMERS_VIEW,
         activePrefix: ROUTES.APP_CUSTOMERS,
       },
+      {
+        path: ROUTES.APP_FINANCE_CUSTOMER_DEBTS,
+        label: 'Debtors List',
+        icon: Wallet,
+        permission: PERMISSIONS.CUSTOMERS_VIEW,
+      },
     ],
   },
   {
@@ -139,7 +145,6 @@ export const NAV_ITEMS: NavSection[] = [
         alsoActive: [
           ROUTES.APP_FINANCE_MONEY_RECEIVED,
           ROUTES.APP_FINANCE_MONEY_SPENT,
-          ROUTES.APP_FINANCE_CUSTOMER_DEBTS,
           ROUTES.APP_FINANCE_SUPPLIER_DEBTS,
           ROUTES.APP_FINANCE_CASHBOOK,
         ],

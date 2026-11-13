@@ -295,7 +295,7 @@ const router = createBrowserRouter([
       {
         path: 'finance/customer-debts',
         element: (
-          <RequirePermission permission={PERMISSIONS.FINANCE_VIEW}>
+          <RequirePermission permission={PERMISSIONS.CUSTOMERS_VIEW}>
             <CustomerDebtsPage />
           </RequirePermission>
         ),

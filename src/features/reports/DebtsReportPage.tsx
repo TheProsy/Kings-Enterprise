@@ -8,11 +8,15 @@ import { StatsSkeleton } from '@/components/ui/Skeleton';
 import { customerService, supplierService } from '@/services';
 import { formatMoney } from '@/lib/formatters';
 import { toast } from '@/lib/toast';
+import { useAuth } from '@/features/auth';
 import { Users, Truck, ArrowUpRight, ArrowDownRight, Scale, Printer, ArrowLeft, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { ROUTES, buildRoute } from '@/constants';
+import { ROUTES, PERMISSIONS, buildRoute } from '@/constants';
 
 export function DebtsReportPage() {
+  const { hasPermission } = useAuth();
+  const canViewSuppliers = hasPermission(PERMISSIONS.SUPPLIERS_VIEW);
+  const canViewFinance = hasPermission(PERMISSIONS.FINANCE_VIEW);
   const [customerDebts, setCustomerDebts] = useState(0);
   const [supplierDebts, setSupplierDebts] = useState(0);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -160,11 +164,13 @@ export function DebtsReportPage() {
               <Truck className="h-5 w-5 text-danger" />
               Supplier Payables ({suppliers.length})
             </CardTitle>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to={ROUTES.APP_FINANCE_SUPPLIER_DEBTS}>
-                Ledger <ExternalLink className="w-3.5 h-3.5 ml-1" />
-              </Link>
-            </Button>
+            {canViewFinance && (
+              <Button variant="ghost" size="sm" asChild>
+                <Link to={ROUTES.APP_FINANCE_SUPPLIER_DEBTS}>
+                  Ledger <ExternalLink className="w-3.5 h-3.5 ml-1" />
+                </Link>
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             {suppliers.length > 0 ? (
@@ -172,12 +178,18 @@ export function DebtsReportPage() {
                 {suppliers.map((s) => (
                   <div key={s.id} className="flex items-center justify-between gap-3 py-3.5">
                     <div className="min-w-0">
-                      <Link
-                        to={buildRoute(ROUTES.APP_SUPPLIER_DETAIL, { supplierId: s.id })}
-                        className="block truncate text-sm font-bold text-text-primary transition-colors hover:text-brand"
-                      >
-                        {s.name}
-                      </Link>
+                      {canViewSuppliers ? (
+                        <Link
+                          to={buildRoute(ROUTES.APP_SUPPLIER_DETAIL, { supplierId: s.id })}
+                          className="block truncate text-sm font-bold text-text-primary transition-colors hover:text-brand"
+                        >
+                          {s.name}
+                        </Link>
+                      ) : (
+                        <p className="block truncate text-sm font-bold text-text-primary">
+                          {s.name}
+                        </p>
+                      )}
                       <p className="mt-0.5 truncate text-xs text-text-secondary">
                         {s.contactPerson ? `${s.contactPerson} · ` : ''}{s.phone || 'No phone'}
                       </p>

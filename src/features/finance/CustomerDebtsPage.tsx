@@ -7,13 +7,16 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { customerService } from '@/services';
 import { formatMoney } from '@/lib/formatters';
-import { ROUTES, buildRoute } from '@/constants';
+import { ROUTES, PERMISSIONS, buildRoute } from '@/constants';
+import { useAuth } from '@/features/auth';
 import { toast } from '@/lib/toast';
 import type { Customer } from '@/types';
 import { AlertCircle, Building2, User } from 'lucide-react';
 
 export function CustomerDebtsPage() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canViewFinance = hasPermission(PERMISSIONS.FINANCE_VIEW);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -119,17 +122,19 @@ export function CustomerDebtsPage() {
         title="Customer Debts"
         description="Monitor outstanding receivables from contractors and customers on credit."
         breadcrumbs={[
-          { label: 'Money & Finance', href: ROUTES.APP_FINANCE },
-          { label: 'Customer Debts' },
+          { label: 'Customers', href: ROUTES.APP_CUSTOMERS },
+          { label: 'Debtors List' },
         ]}
         action={
-          <Button
-            variant="secondary"
-            onClick={() => navigate(ROUTES.APP_FINANCE_SUPPLIER_DEBTS)}
-          >
-            <Building2 className="mr-1.5 h-4 w-4" />
-            Supplier Debts
-          </Button>
+          canViewFinance ? (
+            <Button
+              variant="secondary"
+              onClick={() => navigate(ROUTES.APP_FINANCE_SUPPLIER_DEBTS)}
+            >
+              <Building2 className="mr-1.5 h-4 w-4" />
+              Supplier Debts
+            </Button>
+          ) : undefined
         }
       />
 
